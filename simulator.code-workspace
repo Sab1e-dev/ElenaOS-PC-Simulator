@@ -1,0 +1,223 @@
+{
+	// https://code.visualstudio.com/docs/editor/workspaces
+	// https://code.visualstudio.com/docs/editor/multi-root-workspaces
+	// https://code.visualstudio.com/docs/editor/variables-reference
+	"folders": [
+		{
+			"path": "."
+		},
+	],
+	// extensions.json section
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools", // common C/C++ support
+			"ms-vscode.cpptools-themes", // general C/C++ theme
+			"ms-vscode.cmake-tools" // cmake support
+		],
+		"unwantedRecommendations": []
+	},
+	// settings.json section
+	"settings": {
+		"files.trimTrailingWhitespace": true,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"cmake.configureOnOpen": true,
+		"files.associations": {
+			"*.embeddedhtml": "html",
+			"glob.h": "c",
+			"lvgl.h": "c",
+			"locale": "c",
+			"elena_os_theme.h": "c",
+			"elena_os_sensor.h": "c",
+			"jerryscript.h": "c",
+			"elena_os_icon.h": "c",
+			"lv_bindings.h": "c",
+			"lv_bindings_misc.h": "c",
+			"__node_handle": "c",
+			"elena_os_nav.h": "c",
+			"string.h": "c",
+			"elena_os_watchface_list.h": "c",
+			"lv_sdl_private.h": "c",
+			"lv_display.h": "c",
+			"ios": "c",
+			"__hash_table": "c",
+			"__split_buffer": "c",
+			"array": "c",
+			"bitset": "c",
+			"deque": "c",
+			"initializer_list": "c",
+			"queue": "c",
+			"stack": "c",
+			"string": "c",
+			"string_view": "c",
+			"unordered_map": "c",
+			"vector": "c",
+			"elena_os_core.h": "c",
+			"__bit_reference": "c",
+			"limits": "c",
+			"optional": "c",
+			"ratio": "c",
+			"stdlib.h": "c",
+			"elena_os_swipe_panel.h": "c",
+			"elena_os_log.h": "c",
+			"elena_os_event.h": "c",
+			"lv_mem.h": "c",
+			"elena_os_card_pager.h": "c",
+			"complex": "c",
+			"elena_os_slide_widget.h": "c",
+			"typeinfo": "c",
+			"__tree": "c",
+			"type_traits": "c",
+			"forward_list": "c",
+			"variant": "c",
+			"algorithm": "c",
+			"elena_os_utils.h": "c",
+			"list": "c",
+			"regex": "c",
+			"elena_os_anim.h": "c",
+			"lv_assert.h": "c",
+			"elena_os_app_list.h": "c",
+			"elena_os_config_internal.h": "c",
+			"elena_os_flash_light.h": "c",
+			"stdio.h": "c",
+			"elena_os_toast.h": "c",
+			"lv_examples.h": "c",
+			"lv_ime_pinyin.h": "c",
+			"elena_os_display.h": "c",
+			"elena_os_port.h": "c",
+			"elena_os_lang.h": "c",
+			"elena_os_settings.h": "c",
+			"sstream": "c",
+			"elena_os_config.h": "c",
+			"elena_os_font.h": "c",
+			"map": "c",
+			"elena_os_basic_widgets.h": "c",
+			"jerryscript-port.h": "c",
+			"elena_os_async.h": "c",
+			"mac_api.h": "c",
+			"script_engine_core.h": "c",
+			"elena_os_watchface.h": "c",
+			"script_engine_native_func.h": "c",
+			"elena_os_misc.h": "c",
+			"elena_os_scene.h": "c",
+			"elena_os_sys.h": "c",
+			"elena_os_test.h": "c",
+			"unistd.h": "c",
+			"elena_os_control_center.h": "c",
+			"elena_os.h": "c",
+			"lv_demos.h": "c",
+			"elena_os_virtual_display.h": "c",
+			"lv_sdl_window.h": "c",
+			"stdbool.h": "c",
+			"stdint.h": "c",
+			"elena_os_crown.h": "c",
+			"elena_os_msg_list.h": "c",
+			"lv_event.h": "c",
+			"lvgl_private.h": "c",
+			"lv_global.h": "c",
+			"elena_os_app.h": "c",
+			"pthread.h": "c",
+			"stat.h": "c",
+			"elena_os_fs_port.h": "c",
+			"elena_os_fs.h": "c",
+			"elena_os_mem_port.h": "c",
+			"elena_os_pkg_mgr.h": "c",
+			"elena_os_cqueue.h": "c",
+			"elena_os_afw.h": "c",
+			"lv_switch_private.h": "c",
+			"elena_os_anim_effects.h": "c",
+			"elena_os_sysmon.h": "c",
+			"elena_os_app_header.h": "c",
+			"elena_os_img.h": "c",
+			"elena_os_screen_mgr.h": "c",
+			"elena_os_mem.h": "c",
+			"elena_os_darray.h": "c",
+			"elena_os_dfw.h": "c"
+		},
+	},
+	// tasks.json section
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Build",
+				"command": "cmake",
+				"args": [
+					"--build",
+					"${command:cmake.buildDirectory}"
+				],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"problemMatcher": {
+					"owner": "cpp",
+					"fileLocation": [
+						"relative",
+						"${workspaceFolder}"
+					],
+					"pattern": {
+						"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+						"file": 1,
+						"line": 2,
+						"column": 3,
+						"severity": 4,
+						"message": 5
+					}
+				}
+			},
+			{
+				"label": "Build and Run",
+				"type": "shell",
+				"command": "${workspaceFolder}/bin/main",
+				"group": {
+					"kind": "test",
+					"isDefault": true
+				},
+				"dependsOn": "Build"
+			}
+		],
+	},
+	// launch.json section
+	"launch": {
+		"version": "0.2.0",
+		"debug.openDebug": "openOnSessionStart",
+		"debug.focusConsoleOnStart": false,
+		"console": "integratedTerminal",
+		"configurations": [
+			{
+				"name": "Debug ElenaOS with gdb",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceFolder}/bin/main",
+				"args": [],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "Build",
+				"stopAtEntry": false,
+				"linux": {
+					"MIMode": "gdb",
+					"miDebuggerPath": "/usr/bin/gdb"
+				},
+				"osx": {
+					"MIMode": "lldb",
+					// "externalConsole": true
+				},
+				"windows": {
+					"MIMode": "gdb",
+					"miDebuggerPath": "C:\\MinGw\\bin\\gdb.exe"
+				}
+			},
+			{
+				"name": "Debug ElenaOS with LLVM",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceFolder}/bin/main",
+				"args": [],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "Build",
+				"stopAtEntry": false,
+				"MIMode": "lldb"
+			},
+		],
+	},
+}

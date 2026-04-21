@@ -1,0 +1,23 @@
+# Ignore build folder
+build/
+bin/
+
+# Ignore UI folder, this should be commited in its own repository
+ui/
+
+# Ignore all dot folders, with below exceptions
+.*/
+!fs/
+!fs/**
+
+# VSCode
+.vscode
+
+# MacOS
+.DS_Store
+
+# Temp files
+tmp/
+
+# Output files
+output/
