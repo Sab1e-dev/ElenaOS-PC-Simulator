@@ -22,6 +22,16 @@
 		"files.insertFinalNewline": true,
 		"files.trimFinalNewlines": true,
 		"cmake.configureOnOpen": true,
+		"cmake.automaticReconfigure": true,
+		"cmake.buildBeforeRun": true,
+		"cmake.configureEnvironment": {
+			"PATH": "C:/msys64/mingw64/bin;C:/msys64/usr/bin;${env:PATH}",
+			"CC": "C:/msys64/mingw64/bin/gcc.exe",
+			"CXX": "C:/msys64/mingw64/bin/g++.exe"
+		},
+		"cmake.buildEnvironment": {
+			"PATH": "C:/msys64/mingw64/bin;C:/msys64/usr/bin;${env:PATH}"
+		},
 		"files.associations": {
 			"*.embeddedhtml": "html",
 			"glob.h": "c",
@@ -140,12 +150,41 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
+				"label": "Configure CMake",
+				"type": "shell",
+				"command": "cmake",
+				"args": [
+					"-S",
+					"${workspaceFolder}",
+					"-B",
+					"${workspaceFolder}/build",
+					"-DCMAKE_C_COMPILER=C:/msys64/mingw64/bin/gcc.exe",
+					"-DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe"
+				],
+				"options": {
+					"env": {
+						"PATH": "C:/msys64/mingw64/bin;C:/msys64/usr/bin;${env:PATH}",
+						"CC": "C:/msys64/mingw64/bin/gcc.exe",
+						"CXX": "C:/msys64/mingw64/bin/g++.exe"
+					}
+				},
+				"problemMatcher": []
+			},
+			{
 				"label": "Build",
+				"type": "shell",
 				"command": "cmake",
 				"args": [
 					"--build",
-					"${command:cmake.buildDirectory}"
+					"${workspaceFolder}/build"
 				],
+				"options": {
+					"env": {
+						"PATH": "C:/msys64/mingw64/bin;C:/msys64/usr/bin;${env:PATH}"
+					}
+				},
+				"dependsOn": "Configure CMake",
+				"dependsOrder": "sequence",
 				"group": {
 					"kind": "build",
 					"isDefault": true
@@ -169,7 +208,7 @@
 			{
 				"label": "Build and Run",
 				"type": "shell",
-				"command": "${workspaceFolder}/bin/main",
+				"command": "${workspaceFolder}/bin/main.exe",
 				"group": {
 					"kind": "test",
 					"isDefault": true
@@ -204,7 +243,8 @@
 				},
 				"windows": {
 					"MIMode": "gdb",
-					"miDebuggerPath": "C:\\MinGw\\bin\\gdb.exe"
+					"program": "${workspaceFolder}\\bin\\main.exe",
+					"miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb.exe"
 				}
 			},
 			{

@@ -17,7 +17,6 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/examples/lv_examples.h"
 #include "lvgl/demos/lv_demos.h"
-#include "glob.h"
 #include "time.h"
 #include <sys/time.h>
 #if LV_USE_OS == LV_OS_ELENAOS
@@ -31,7 +30,84 @@
 
 // Variables
 extern lv_obj_t *brightness_mask;
+struct eos_sem_t
+{
+    pthread_mutex_t mutex;
+};
 // Function Implementations
+
+eos_sem_t *eos_sem_create(uint32_t initial_count, uint32_t max_count)
+{
+    (void)initial_count;
+    (void)max_count;
+
+    eos_sem_t *sem = malloc(sizeof(eos_sem_t));
+    if (!sem)
+        return NULL;
+
+    if (pthread_mutex_init(&sem->mutex, NULL) != 0)
+    {
+        free(sem);
+        return NULL;
+    }
+
+    return sem;
+}
+
+void eos_sem_destroy(eos_sem_t *sem)
+{
+    if (!sem)
+        return;
+
+    pthread_mutex_destroy(&sem->mutex);
+    free(sem);
+}
+
+bool eos_sem_take(eos_sem_t *sem, uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+    if (!sem)
+        return false;
+
+    return pthread_mutex_lock(&sem->mutex) == 0;
+}
+
+void eos_sem_give(eos_sem_t *sem)
+{
+    if (!sem)
+        return;
+
+    pthread_mutex_unlock(&sem->mutex);
+}
+
+void *eos_malloc_core(size_t size)
+{
+    return malloc(size);
+}
+
+void *eos_malloc_zeroed_core(size_t size)
+{
+    return calloc(1, size);
+}
+
+void eos_free_core(void *ptr)
+{
+    free(ptr);
+}
+
+void *eos_realloc_core(void *ptr, size_t new_size)
+{
+    return realloc(ptr, new_size);
+}
+
+void eos_vibrator_on(uint8_t strength)
+{
+    (void)strength;
+}
+
+void eos_vibrator_off(void)
+{
+}
 
 void *eos_malloc_large(size_t size)
 {
@@ -68,7 +144,8 @@ eos_datetime_t eos_time_get_core(void)
     eos_datetime_t dt = {0};
     struct timeval tv;
     gettimeofday(&tv, NULL); // 获取秒和微秒
-    struct tm *tm_info = localtime(&tv.tv_sec);
+    time_t now = (time_t)tv.tv_sec;
+    struct tm *tm_info = localtime(&now);
     dt.year = tm_info->tm_year + 1900;
     dt.month = tm_info->tm_mon + 1;
     dt.day = tm_info->tm_mday;
@@ -246,4 +323,14 @@ void eos_locate_phone(void)
 void eos_speaker_set_volume(uint8_t volume)
 {
     set_system_volume(volume * 0.01);
+}
+
+void eos_sys_sleep(void)
+{
+    eos_display_set_brightness(0);
+}
+
+void eos_sys_wake(void)
+{
+    eos_display_set_brightness(100);
 }

@@ -6,8 +6,10 @@ project(lvgl C CXX)
 # add_link_options(-fsanitize=address)
 
 # 禁用枚举转换警告
-add_compile_options(-Wno-enum-enum-conversion)
-add_compile_options(-Wno-error=enum-enum-conversion)
+if(NOT WIN32)
+    add_compile_options(-Wno-enum-enum-conversion)
+    add_compile_options(-Wno-error=enum-enum-conversion)
+endif()
 add_compile_options(-Wno-unterminated-string-initialization)
 
 set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
@@ -46,7 +48,7 @@ if(USE_FREERTOS)
     )
 else()
     message(STATUS "FreeRTOS is disabled")
-    set(FREERTOS_SOURCES "")  # No FreeRTOS sources if FreeRTOS is disabled
+    set(FREERTOS_SOURCES "") # No FreeRTOS sources if FreeRTOS is disabled
 endif()
 
 # Main include files of the project
@@ -98,7 +100,7 @@ if(USE_FREERTOS)
         ${PROJECT_SOURCE_DIR}/main/src/freertos_main.cpp
         ${PROJECT_SOURCE_DIR}/main/src/mouse_cursor_icon.c
         ${PROJECT_SOURCE_DIR}/main/src/FreeRTOS_Posix_Port.c
-        ${FREERTOS_SOURCES}  # Add only if USE_FREERTOS is enabled
+        ${FREERTOS_SOURCES} # Add only if USE_FREERTOS is enabled
     )
     # Link FreeRTOS libraries
     target_link_libraries(main freertos_config FreeRTOS)
@@ -118,7 +120,28 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/ElenaOS)
 
 # Define LVGL configuration as a simple include
 target_compile_definitions(main PRIVATE LV_CONF_INCLUDE_SIMPLE)
-target_link_libraries(main elenaos_lib lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES} m pthread)
+target_link_libraries(main
+    -Wl,--whole-archive elenaos_lib -Wl,--no-whole-archive
+    lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES} m pthread)
+
+if(WIN32 AND MINGW)
+    # Copy MinGW runtime and SDL2 DLLs next to main.exe for direct launch.
+    get_filename_component(MINGW_BIN_DIR ${CMAKE_C_COMPILER} DIRECTORY)
+    set(WIN_RUNTIME_DLLS
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+        libwinpthread-1.dll
+        SDL2.dll
+    )
+
+    foreach(RUNTIME_DLL ${WIN_RUNTIME_DLLS})
+        add_custom_command(TARGET main POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MINGW_BIN_DIR}/${RUNTIME_DLL}"
+            "$<TARGET_FILE_DIR:main>"
+        )
+    endforeach()
+endif()
 
 # Only link freertos_config if the FreeRTOS directory exists
 if(USE_FREERTOS)
@@ -203,15 +226,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         -Wstrict-aliasing
     )
 
-if (ASAN)
-    message(STATUS "AddressSanitizer enabled")
+    if(ASAN)
+        message(STATUS "AddressSanitizer enabled")
 
-    # Add AddressSanitizer flags
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
-else()
-    message(STATUS "AddressSanitizer disabled")
-endif()
+        # Add AddressSanitizer flags
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+    else()
+        message(STATUS "AddressSanitizer disabled")
+    endif()
 endif()

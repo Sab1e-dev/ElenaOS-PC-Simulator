@@ -16,7 +16,6 @@
 #define DEBUG_VAR_DEFS_IMPLEMENTATION
 #include "debug_var_defs.h"
 #include "debug_ui.h"
-#include "glob.h"
 #if LV_USE_OS == LV_OS_ELENAOS
 #include "elena_os.h"
 #include "elena_os_img.h"
@@ -70,6 +69,10 @@ static void _debug_ui_refresh_timer_cb(lv_timer_t *timer)
 static lv_display_t *hal_init(int32_t w, int32_t h);
 
 extern void freertos_main(void);
+
+#ifdef _WIN32
+#define main SDL_main
+#endif
 
 int main(int argc, char **argv)
 {

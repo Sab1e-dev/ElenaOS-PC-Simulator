@@ -12,10 +12,12 @@
 // Includes
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__APPLE__)
 #include <CoreAudio/CoreAudio.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/ps/IOPSKeys.h>
+#endif
 
 // Macros and Definitions
 
@@ -24,6 +26,8 @@
 // Function Implementations
 
 #define VOLUME_ERROR -1.0f
+
+#if defined(__APPLE__)
 
 // 获取默认输出设备
 static AudioDeviceID get_default_output_device(void)
@@ -194,3 +198,27 @@ int get_system_charging(void)
     CFRelease(blob);
     return ac_connected;
 }
+
+#else
+
+float get_system_volume(void)
+{
+    return VOLUME_ERROR;
+}
+
+void set_system_volume(float volume)
+{
+    (void)volume;
+}
+
+float get_system_battery_level(void)
+{
+    return -1.0f;
+}
+
+int get_system_charging(void)
+{
+    return -1;
+}
+
+#endif
