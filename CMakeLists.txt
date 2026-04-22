@@ -129,8 +129,20 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/ElenaOS)
 
 # Define LVGL configuration as a simple include
 target_compile_definitions(main PRIVATE LV_CONF_INCLUDE_SIMPLE)
+if(MSVC)
+    target_link_options(main PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:elenaos_lib>")
+elseif(APPLE)
+    target_link_options(main PRIVATE "-Wl,-force_load,$<TARGET_FILE:elenaos_lib>")
+else()
+    target_link_options(main PRIVATE
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:elenaos_lib>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 target_link_libraries(main
-    -Wl,--whole-archive elenaos_lib -Wl,--no-whole-archive
+    elenaos_lib
     lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES} m pthread)
 
 if(WIN32 AND MINGW)
