@@ -88,6 +88,15 @@ add_compile_definitions($<$<BOOL:${LV_USE_FFMPEG}>:LV_USE_FFMPEG=1>)
 add_subdirectory(lvgl)
 target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/lvgl/src ${PROJECT_SOURCE_DIR}/ElenaOS/third_party/jerryscript/jerry-core/include)
 
+# Keep third-party LVGL sources untouched: provide fixed-width integer types for ThorVG via compiler forced-include.
+if(TARGET lvgl_thorvg)
+    if(MSVC)
+        target_compile_options(lvgl_thorvg PRIVATE /FIstdint.h)
+    else()
+        target_compile_options(lvgl_thorvg PRIVATE -include stdint.h)
+    endif()
+endif()
+
 # Create the main executable, depending on the FreeRTOS option
 if(USE_FREERTOS)
     add_executable(main
