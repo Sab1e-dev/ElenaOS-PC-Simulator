@@ -17,8 +17,8 @@
 #include "debug_var_defs.h"
 #include "debug_ui.h"
 #if LV_USE_OS == LV_OS_ELENAOS
-#include "elena_os.h"
-#include "elena_os_img.h"
+#include "elenix_os.h"
+#include "eos_img.h"
 #endif
 
 // Macros and Definitions
@@ -137,7 +137,7 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
 
   lv_display_t *disp = lv_sdl_window_create(w, h);
   lv_sdl_window_set_resizeable(disp, false);
-  lv_sdl_window_set_title(disp, "ElenaOS PC Simulator");
+  lv_sdl_window_set_title(disp, "ElenixOS PC Simulator");
 
   lv_indev_t *mouse = lv_sdl_mouse_create();
   lv_indev_set_group(mouse, lv_group_get_default());

@@ -86,7 +86,7 @@ add_compile_definitions($<$<BOOL:${LV_USE_FFMPEG}>:LV_USE_FFMPEG=1>)
 
 # Add LVGL subdirectory
 add_subdirectory(lvgl)
-target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/lvgl/src ${PROJECT_SOURCE_DIR}/ElenaOS/third_party/jerryscript/jerry-core/include)
+target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/lvgl/src ${PROJECT_SOURCE_DIR}/ElenixOS/third_party/jerryscript/jerry-core/include)
 
 # Keep third-party LVGL sources untouched: provide fixed-width integer types for ThorVG via compiler forced-include.
 if(TARGET lvgl_thorvg)
@@ -125,24 +125,24 @@ else()
     )
 endif()
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/ElenaOS)
+add_subdirectory(${PROJECT_SOURCE_DIR}/ElenixOS)
 
 # Define LVGL configuration as a simple include
 target_compile_definitions(main PRIVATE LV_CONF_INCLUDE_SIMPLE)
 if(MSVC)
-    target_link_options(main PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:elenaos_lib>")
+    target_link_options(main PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:elenixos_lib>")
 elseif(APPLE)
-    target_link_options(main PRIVATE "-Wl,-force_load,$<TARGET_FILE:elenaos_lib>")
+    target_link_options(main PRIVATE "-Wl,-force_load,$<TARGET_FILE:elenixos_lib>")
 else()
     target_link_options(main PRIVATE
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:elenaos_lib>"
+        "$<TARGET_FILE:elenixos_lib>"
         "-Wl,--no-whole-archive"
     )
 endif()
 
 target_link_libraries(main
-    elenaos_lib
+    elenixos_lib
     lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES} m pthread)
 
 if(WIN32 AND MINGW)

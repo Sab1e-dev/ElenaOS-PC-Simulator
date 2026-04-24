@@ -12,13 +12,13 @@ import platform
 CWD = os.getcwd()
 GenJSONPath = os.path.join(CWD, 'lvgl', 'scripts', 'gen_json')
 OutputPath = os.path.join(GenJSONPath, 'output')
-LVBindingsPath = os.path.join(CWD, 'ElenaOS', 'src', 'script_engine', 'lv', 'bindings')
-GenLVGLBindingPyPath = os.path.join(CWD, 'ElenaOS', 'scripts', 'gen_lvgl_binding.py')
-ConfigPath = os.path.join(CWD, 'ElenaOS', 'examples', 'ElenaOS')
-GenSNILVTypesPyPath = os.path.join(CWD, 'ElenaOS', 'scripts', 'sni', 'gen_sni_lv_types.py')
-SNITypesPath = os.path.join(CWD, 'ElenaOS', 'src', 'script_engine', 'sni', 'sni_types.h')
-SNILVTypesOutputPath = os.path.join(CWD, 'ElenaOS', 'scripts', 'sni', 'config')
-SNIGenPath = os.path.join(CWD, 'ElenaOS', 'src', 'script_engine', 'sni', 'sni_gen')
+LVBindingsPath = os.path.join(CWD, 'ElenixOS', 'src', 'script_engine', 'lv', 'bindings')
+GenLVGLBindingPyPath = os.path.join(CWD, 'ElenixOS', 'scripts', 'gen_lvgl_binding.py')
+ConfigPath = os.path.join(CWD, 'ElenixOS', 'examples', 'ElenixOS')
+GenSNILVTypesPyPath = os.path.join(CWD, 'ElenixOS', 'scripts', 'sni', 'gen_sni_lv_types.py')
+SNITypesPath = os.path.join(CWD, 'ElenixOS', 'src', 'script_engine', 'sni', 'sni_types.h')
+SNILVTypesOutputPath = os.path.join(CWD, 'ElenixOS', 'scripts', 'sni', 'config')
+SNIGenPath = os.path.join(CWD, 'ElenixOS', 'src', 'script_engine', 'sni', 'sni_gen')
 
 # ===================================================================
 # 检查并提取 Python 3.10 路径
@@ -207,7 +207,7 @@ def generate_lv_bindings_c():
         print(f"❌ lvgl.json 文件不存在: {os.path.join(OutputPath, 'lvgl.json')}")
         sys.exit(1)
 
-    if not run_command([virtual_python_exe, "-m", "pip", "install", "-r", os.path.join(CWD, "ElenaOS", "scripts", "requirements.txt")]):
+    if not run_command([virtual_python_exe, "-m", "pip", "install", "-r", os.path.join(CWD, "ElenixOS", "scripts", "requirements.txt")]):
         sys.exit(1)
     lvgl_json_path = os.path.join(OutputPath, "lvgl.json")
     if not run_command([virtual_python_exe, GenLVGLBindingPyPath, f"--json-file={lvgl_json_path}",

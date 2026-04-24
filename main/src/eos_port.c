@@ -1,11 +1,11 @@
 /**
- * @file elena_os_port.c
- * @brief ElenaOS 移植
+ * @file eos_port.c
+ * @brief ElenixOS 移植
  * @author Sab1e
  * @date 2025-08-21
  */
 
-#include "elena_os_port.h"
+#include "eos_port.h"
 
 // Includes
 #define _DEFAULT_SOURCE /* needed for usleep() */
@@ -20,10 +20,10 @@
 #include "time.h"
 #include <sys/time.h>
 #if LV_USE_OS == LV_OS_ELENAOS
-#include "elena_os_core.h"
-#include "elena_os_time.h"
+#include "eos_core.h"
+#include "eos_time.h"
 #endif
-#include "elena_os_config.h"
+#include "eos_config.h"
 #include "mac_api.h"
 
 // Macros and Definitions
