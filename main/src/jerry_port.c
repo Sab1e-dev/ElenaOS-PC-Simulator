@@ -1,8 +1,6 @@
 /**
  * @file jerry_port.c
- * @brief Jerry移植
- * @author Sab1e
- * @date 2025-09-08
+ * @brief JerryScript Port for ElenixOS PC Simulator
  */
 
 // Includes

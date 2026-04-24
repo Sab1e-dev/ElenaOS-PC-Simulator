@@ -1,10 +1,6 @@
 /**
  * @file mac_api.c
- * @brief MacOS API
- *
- * 适用 Mac Tahoe 26.0.1
- * @author Sab1e
- * @date 2025-10-13
+ * @brief MacOS API for macOS Tahoe 26
  */
 
 #include "mac_api.h"
@@ -29,7 +25,7 @@
 
 #if defined(__APPLE__)
 
-// 获取默认输出设备
+// Get the default output audio device ID
 static AudioDeviceID get_default_output_device(void)
 {
     AudioDeviceID deviceID = 0;
@@ -43,7 +39,7 @@ static AudioDeviceID get_default_output_device(void)
     return deviceID;
 }
 
-// 获取指定通道音量
+// Get the volume for a specific channel (1 for left, 2 for right)
 static Float32 get_channel_volume(AudioDeviceID deviceID, UInt32 channel)
 {
     Float32 volume = 0.0;
@@ -71,13 +67,13 @@ static void set_channel_volume(AudioDeviceID deviceID, UInt32 channel, Float32 v
     AudioObjectSetPropertyData(deviceID, &propertyAddress, 0, NULL, size, &volume);
 }
 
-// 获取系统音量 (0.0 ~ 1.0)
+// Get the system volume (0.0 ~ 1.0)
 float get_system_volume(void)
 {
     AudioDeviceID deviceID = get_default_output_device();
     if (deviceID == 0) return VOLUME_ERROR;
 
-    // 方法1：尝试主通道音量
+    // Method 1: Try main channel volume
     Float32 volume = 0.0;
     UInt32 size = sizeof(volume);
     AudioObjectPropertyAddress mainAddr = {
@@ -88,7 +84,7 @@ float get_system_volume(void)
     OSStatus result = AudioObjectGetPropertyData(deviceID, &mainAddr, 0, NULL, &size, &volume);
     if (result == noErr) return volume;
 
-    // 方法1失败 → 方法2：左右声道
+    // Method 2: Average left and right channels
     Float32 left = get_channel_volume(deviceID, 1);
     Float32 right = get_channel_volume(deviceID, 2);
     if (left < 0 && right < 0) {
@@ -100,7 +96,7 @@ float get_system_volume(void)
     return (left + right) / 2.0f;
 }
 
-// 设置系统音量 (0.0 ~ 1.0)
+// Set the system volume (0.0 ~ 1.0)
 void set_system_volume(float volume)
 {
     if (volume < 0.0f) volume = 0.0f;
@@ -112,16 +108,16 @@ void set_system_volume(float volume)
         return;
     }
 
-    // 方法1：尝试主通道音量
+    // Method 1: Try main channel volume
     AudioObjectPropertyAddress mainAddr = {
         kAudioDevicePropertyVolumeScalar,
         kAudioDevicePropertyScopeOutput,
         kAudioObjectPropertyElementMain
     };
     OSStatus result = AudioObjectSetPropertyData(deviceID, &mainAddr, 0, NULL, sizeof(volume), &volume);
-    if (result == noErr) return; // 成功则返回
+    if (result == noErr) return; // Success
 
-    // 方法1失败 → 方法2：设置左右声道
+    // Method 2: Set left and right channels
     set_channel_volume(deviceID, 1, volume);
     set_channel_volume(deviceID, 2, volume);
 }
@@ -153,7 +149,7 @@ float get_system_battery_level(void)
             CFNumberGetValue(maxCapacity, kCFNumberIntType, &max);
             if (max > 0) {
                 level = (float)cur / (float)max;
-                break; // 默认取第一个电池
+                break; // Default to the first battery
             }
         }
     }
@@ -188,9 +184,9 @@ int get_system_charging(void)
             } else if (CFStringCompare(state, CFSTR(kIOPSBatteryPowerValue), 0) == kCFCompareEqualTo) {
                 ac_connected = 0;
             } else {
-                ac_connected = -1; // 未知状态
+                ac_connected = -1; // Unknown state
             }
-            break; // 默认取第一个电池
+            break; // Default to the first battery
         }
     }
 

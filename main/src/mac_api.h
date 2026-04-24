@@ -1,8 +1,6 @@
 /**
  * @file mac_api.h
- * @brief MacOS API
- * @author Sab1e
- * @date 2025-10-13
+ * @brief MacOS API for macOS Tahoe 26
  */
 
 #ifndef MAC_API_H
@@ -21,9 +19,26 @@ extern "C" {
 /* Public typedefs --------------------------------------------*/
 
 /* Public function prototypes --------------------------------*/
+
+/**
+ * @brief Get the system volume object
+ * @return float
+ */
 float get_system_volume(void);
+/**
+ * @brief Set the system volume object
+ * @param volume
+ */
 void set_system_volume(float volume);
+/**
+ * @brief Get the system battery level object
+ * @return float
+ */
 float get_system_battery_level(void);
+/**
+ * @brief Get the system charging status
+ * @return int
+ */
 int get_system_charging(void);
 #ifdef __cplusplus
 }

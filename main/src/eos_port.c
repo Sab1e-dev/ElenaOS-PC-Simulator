@@ -1,8 +1,6 @@
 /**
  * @file eos_port.c
- * @brief ElenixOS 移植
- * @author Sab1e
- * @date 2025-08-21
+ * @brief ElenixOS Port for PC Simulator
  */
 
 #include "eos_port.h"
@@ -143,7 +141,7 @@ eos_datetime_t eos_time_get_core(void)
 {
     eos_datetime_t dt = {0};
     struct timeval tv;
-    gettimeofday(&tv, NULL); // 获取秒和微秒
+    gettimeofday(&tv, NULL); // Get current time with microsecond precision
     time_t now = (time_t)tv.tv_sec;
     struct tm *tm_info = localtime(&now);
     dt.year = tm_info->tm_year + 1900;
@@ -172,19 +170,26 @@ void *_thread_sensor(void *arg)
     eos_sensor_t *s = eos_sensor_get(type);
     if (!s)
         return NULL;
-    // sleep(rand() % 10);
-    // sleep(2);
+#if 0
+    /*
+    To simulate real sensor reading delay,
+    we can add a random sleep here. In a real implementation,
+    this would be the time taken to read from the hardware sensor.
+    */
+    sleep(rand() % 10);
+    sleep(2);
+#endif
     switch (type)
     {
-    case EOS_SENSOR_TYPE_ACCE: /**< 加速度传感器 */
+    case EOS_SENSOR_TYPE_ACCE: /**< Accelerometer */
         s->type = EOS_SENSOR_TYPE_ACCE;
-        s->data.acce.x = (rand() % 4000) - 2000; // ±2g 模拟值
+        s->data.acce.x = (rand() % 4000) - 2000; // ±2g (assuming 1g = 1000)
         s->data.acce.y = (rand() % 4000) - 2000;
         s->data.acce.z = (rand() % 4000) - 2000;
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_GYRO: /**< 陀螺仪传感器 */
+    case EOS_SENSOR_TYPE_GYRO: /**< Gyroscope */
         s->type = EOS_SENSOR_TYPE_GYRO;
         s->data.gyro.x = (rand() % 500) - 250; // ±250 dps
         s->data.gyro.y = (rand() % 500) - 250;
@@ -192,7 +197,7 @@ void *_thread_sensor(void *arg)
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_MAG: /**< 磁传感器 */
+    case EOS_SENSOR_TYPE_MAG: /**< Magnetometer */
         s->type = EOS_SENSOR_TYPE_MAG;
         s->data.mag.x = (rand() % 2000) - 1000;
         s->data.mag.y = (rand() % 2000) - 1000;
@@ -200,68 +205,68 @@ void *_thread_sensor(void *arg)
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_TEMP: /**< 温度传感器 */
+    case EOS_SENSOR_TYPE_TEMP: /**< Temperature sensor */
         s->type = EOS_SENSOR_TYPE_TEMP;
         s->data.temp.temp = (rand() % 3500) + 1500; // 15.00°C ~ 50.00°C
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_HUMI: /**< 相对湿度传感器 */
+    case EOS_SENSOR_TYPE_HUMI: /**< Relative humidity sensor */
         s->type = EOS_SENSOR_TYPE_HUMI;
         s->data.humi.humidity = (rand() % 10000); // 0~100.00% RH
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_BARO: /**< 气压传感器 */
+    case EOS_SENSOR_TYPE_BARO: /**< Barometer */
         s->type = EOS_SENSOR_TYPE_BARO;
         s->data.baro.pressure = 101325 + (rand() % 2000 - 1000); // 1013.25 ±10 hPa
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_LIGHT: /**< 环境光传感器 */
+    case EOS_SENSOR_TYPE_LIGHT: /**< Environment light sensor */
         s->type = EOS_SENSOR_TYPE_LIGHT;
         s->data.light.lux = rand() % 10000; // 0~10000 lx
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_PROXIMITY: /**< 距离传感器 */
+    case EOS_SENSOR_TYPE_PROXIMITY: /**< Proximity sensor */
         s->type = EOS_SENSOR_TYPE_PROXIMITY;
         s->data.proximity.distance_mm = rand() % 500; // 0~500 mm
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_HR: /**< 心率传感器 */
+    case EOS_SENSOR_TYPE_HR: /**< Heart rate sensor */
         s->type = EOS_SENSOR_TYPE_HR;
         s->data.hr.heart_rate = rand() % 100;
         s->data.hr.spo2 = rand() % 100;
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_TVOC: /**< TVOC传感器 */
+    case EOS_SENSOR_TYPE_TVOC: /**< TVOC sensor */
         s->type = EOS_SENSOR_TYPE_TVOC;
         s->data.tvoc.tvoc = rand() % 500; // 0~500 ppb
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_NOISE: /**< 噪声传感器 */
+    case EOS_SENSOR_TYPE_NOISE: /**< Noise sensor */
         s->type = EOS_SENSOR_TYPE_NOISE;
         s->data.noise.noise_db = (rand() % 7000) + 3000; // 30.00~100.00 dB
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_STEP: /**< 计步传感器 */
+    case EOS_SENSOR_TYPE_STEP: /**< Step sensor */
         s->type = EOS_SENSOR_TYPE_STEP;
-        s->data.step.steps += rand() % 5; // 随机增加步数
+        s->data.step.steps += rand() % 5; // Randomly increase step count
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_FORCE: /**< 力传感器 */
+    case EOS_SENSOR_TYPE_FORCE: /**< Force sensor */
         s->type = EOS_SENSOR_TYPE_FORCE;
         s->data.force.force = rand() % 10000; // 0~100.00 N
         eos_sensor_report(s);
         break;
 
-    case EOS_SENSOR_TYPE_BAT: /**< 电池电量传感器 */
+    case EOS_SENSOR_TYPE_BAT: /**< Battery level sensor */
         s->type = EOS_SENSOR_TYPE_BAT;
         s->data.bat.level = get_system_battery_level() * 100;
         s->data.bat.charging = get_system_charging() == 1 ? true : false;
@@ -270,7 +275,7 @@ void *_thread_sensor(void *arg)
 
     case EOS_SENSOR_TYPE_UNKNOWN:
     default:
-        printf("未知传感器类型: %d\n", type);
+        printf("Unknown sensor type: %d\n", type);
         break;
     }
 }
@@ -297,7 +302,7 @@ void eos_sensor_read_sync(eos_sensor_type_t type, eos_sensor_t *out)
     switch (type)
     {
     case EOS_SENSOR_TYPE_HR:
-        // 触发心率测量函数
+        // Trigger heart rate measurement function
         sensor.type = EOS_SENSOR_TYPE_HR;
         sensor.data.hr.heart_rate = rand() % 100;
         sensor.data.hr.spo2 = rand() % 100;

@@ -101,8 +101,6 @@ endif()
 if(USE_FREERTOS)
     add_executable(main
         ${PROJECT_SOURCE_DIR}/main/src/main.c
-        ${PROJECT_SOURCE_DIR}/debugger_box/debug_var.c
-        ${PROJECT_SOURCE_DIR}/debugger_box/debug_ui.c
         ${PROJECT_SOURCE_DIR}/main/src/eos_port.c
         ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
         ${PROJECT_SOURCE_DIR}/main/src/mac_api.c
@@ -116,8 +114,6 @@ if(USE_FREERTOS)
 else()
     add_executable(main
         ${PROJECT_SOURCE_DIR}/main/src/main.c
-        ${PROJECT_SOURCE_DIR}/debugger_box/debug_var.c
-        ${PROJECT_SOURCE_DIR}/debugger_box/debug_ui.c
         ${PROJECT_SOURCE_DIR}/main/src/eos_port.c
         ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
         ${PROJECT_SOURCE_DIR}/main/src/mac_api.c

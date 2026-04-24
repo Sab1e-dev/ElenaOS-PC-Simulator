@@ -1,7 +1,5 @@
 /**
  * @file main.c
- * @author Sab1e
- * @date 2025-09-30
  */
 
 // Includes
@@ -13,26 +11,16 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/examples/lv_examples.h"
 #include "lvgl/demos/lv_demos.h"
-#define DEBUG_VAR_DEFS_IMPLEMENTATION
-#include "debug_var_defs.h"
-#include "debug_ui.h"
 #if LV_USE_OS == LV_OS_ELENAOS
 #include "elenix_os.h"
 #include "eos_img.h"
 #endif
 
 // Macros and Definitions
-#define DEBUG_PANEL_ENABLE 0
 
 #define SIMULATOR_CONTAINER_WIDTH 500
 #define SIMULATOR_CONTAINER_HEIGHT 520
-#define DEBUGGER_WIDTH 420
-#define DEBUGGER_HEIGHT SIMULATOR_CONTAINER_HEIGHT
-#if DEBUG_PANEL_ENABLE
-#define WINDOW_WIDTH SIMULATOR_CONTAINER_WIDTH + DEBUGGER_WIDTH
-#else
 #define WINDOW_WIDTH SIMULATOR_CONTAINER_WIDTH
-#endif
 #define WINDOW_HEIGHT SIMULATOR_CONTAINER_HEIGHT
 #define LV_USE_MOUSE_CURSOR_IMAGE 0
 
@@ -57,14 +45,6 @@
 // Variables
 lv_obj_t *brightness_mask = NULL;
 
-#if DEBUG_PANEL_ENABLE
-static void _debug_ui_refresh_timer_cb(lv_timer_t *timer)
-{
-  (void)timer;
-  debug_ui_refresh();
-}
-#endif
-
 // Function Implementations
 static lv_display_t *hal_init(int32_t w, int32_t h);
 
@@ -82,9 +62,6 @@ int main(int argc, char **argv)
   /*Initialize LVGL*/
   lv_init();
   lv_lodepng_init();
-#if DEBUG_PANEL_ENABLE
-  debug_var_defs_init();
-#endif
 
   /*Initialize the HAL (display, input devices, tick) for LVGL*/
   hal_init(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -217,29 +194,6 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   lv_imagebutton_set_src(side_btn, LV_IMAGEBUTTON_STATE_RELEASED, SIDE_BUTTON_SRC, SIDE_BUTTON_SRC, SIDE_BUTTON_SRC);
   lv_obj_add_style(side_btn, &style_pressed, LV_STATE_PRESSED);
   lv_obj_add_event_cb(side_btn, _side_button_clicked_cb, LV_EVENT_CLICKED, NULL);
-
-#if DEBUG_PANEL_ENABLE
-  lv_obj_t *debugger_container = lv_obj_create(scr);
-  lv_obj_remove_style_all(debugger_container);
-  lv_obj_set_pos(debugger_container, SIMULATOR_CONTAINER_WIDTH, 0);
-  lv_obj_set_size(debugger_container, DEBUGGER_WIDTH, DEBUGGER_HEIGHT);
-  lv_obj_remove_flag(debugger_container, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(debugger_container, lv_color_white(), 0);
-  lv_obj_set_style_bg_opa(debugger_container, LV_OPA_COVER, 0);
-
-  lv_obj_t *debugger_box = lv_obj_create(debugger_container);
-  lv_obj_remove_style_all(debugger_box);
-  lv_obj_center(debugger_box);
-  lv_obj_set_style_bg_color(debugger_box, lv_color_hex(0xf7f7f7), 0);
-  lv_obj_set_style_bg_opa(debugger_box, LV_OPA_COVER, 0);
-  lv_obj_set_size(debugger_box, DEBUGGER_WIDTH - 20, DEBUGGER_HEIGHT - 20);
-  lv_obj_set_style_radius(debugger_box, 50, 0);
-  lv_obj_add_flag(debugger_box, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_scroll_dir(debugger_box, LV_DIR_VER);
-
-  debug_ui_create(debugger_box);
-  lv_timer_create(_debug_ui_refresh_timer_cb, 100, NULL);
-#endif
 
   return disp;
 }
