@@ -7,6 +7,6 @@
 [submodule "FreeRTOS"]
 	path = FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
-[submodule "ElenaOS"]
-	path = ElenaOS
-	url = https://github.com/Sab1e-dev/ElenaOS.git
+[submodule "ElenixOS"]
+	path = ElenixOS
+	url = https://github.com/ElenixOS/ElenixOS.git
