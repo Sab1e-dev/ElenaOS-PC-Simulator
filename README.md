@@ -47,6 +47,8 @@ It builds the WASM target and publishes the output to GitHub Pages automatically
 
 After enabling Pages in repository settings (`Build and deployment -> Source: GitHub Actions`), artifacts are published to:
 
+Important: make sure the repository Pages source is set to `GitHub Actions`, not `Deploy from a branch`. The branch-based Pages path runs the Jekyll build pipeline and can hide the WASM output.
+
 - `https://<owner>.github.io/<repo>/wasm/latest/main.html`
 - `https://<owner>.github.io/<repo>/wasm/latest/main.js`
 - `https://<owner>.github.io/<repo>/wasm/latest/main.wasm`

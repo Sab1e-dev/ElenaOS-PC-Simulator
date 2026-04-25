@@ -180,6 +180,7 @@ if(EOS_IS_WASM)
         "-sSAFE_HEAP=0"
         "-sEXIT_RUNTIME=0"
         "-sNO_DISABLE_EXCEPTION_CATCHING"
+        "--shell-file=${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
         "--preload-file=${PROJECT_SOURCE_DIR}/fs/.sys@/.sys"
         "--preload-file=${PROJECT_SOURCE_DIR}/fs/.simulator@/.simulator"
         "--source-map-base=${EOS_WASM_SOURCE_MAP_BASE}"
