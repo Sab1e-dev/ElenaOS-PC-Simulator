@@ -12,7 +12,8 @@
 		"recommendations": [
 			"ms-vscode.cpptools", // common C/C++ support
 			"ms-vscode.cpptools-themes", // general C/C++ theme
-			"ms-vscode.cmake-tools" // cmake support
+			"ms-vscode.cmake-tools", // cmake support
+			"ritwickdey.liveserver" // static hosting for WASM output
 		],
 		"unwantedRecommendations": []
 	},
@@ -24,6 +25,12 @@
 		"cmake.configureOnOpen": true,
 		"cmake.automaticReconfigure": true,
 		"cmake.buildBeforeRun": true,
+		"liveServer.settings.port": 5500,
+		"liveServer.settings.root": "/",
+		"liveServer.settings.ignoreFiles": [
+			"**/.git/**",
+			"**/node_modules/**"
+		],
 		"files.associations": {
 			"*.embeddedhtml": "html",
 			"glob.h": "c",
@@ -149,7 +156,8 @@
 					"-S",
 					"${workspaceFolder}",
 					"-B",
-					"${workspaceFolder}/build"
+					"${workspaceFolder}/build",
+					"-DEOS_PLATFORM=Native"
 				],
 				"windows": {
 					"args": [
@@ -157,6 +165,7 @@
 						"${workspaceFolder}",
 						"-B",
 						"${workspaceFolder}/build",
+						"-DEOS_PLATFORM=Native",
 						"-DCMAKE_C_COMPILER=C:/msys64/mingw64/bin/gcc.exe",
 						"-DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe"
 					],
@@ -219,6 +228,48 @@
 					"isDefault": true
 				},
 				"dependsOn": "Build"
+			},
+			{
+				"label": "Configure WASM",
+				"type": "shell",
+				"command": "bash",
+				"args": [
+					"-lc",
+					"WORKSPACE=\"${workspaceFolder}\"; if [ -n \"$EMSDK\" ] && [ -f \"$EMSDK/emsdk_env.sh\" ]; then EMSDK_ROOT=\"$EMSDK\"; elif [ -f \"$WORKSPACE/../emsdk/emsdk_env.sh\" ]; then EMSDK_ROOT=\"$(cd \"$WORKSPACE/../emsdk\" && pwd)\"; else echo \"Unable to locate emsdk. Set EMSDK or place emsdk at ../emsdk relative to the workspace.\"; exit 1; fi; . \"$EMSDK_ROOT/emsdk_env.sh\" >/dev/null && emcmake cmake -S \"$WORKSPACE\" -B \"$WORKSPACE/build-wasm\" -DEOS_PLATFORM=WASM -DCMAKE_BUILD_TYPE=Debug"
+				],
+				"problemMatcher": []
+			},
+			{
+				"label": "Build WASM",
+				"type": "shell",
+				"command": "bash",
+				"args": [
+					"-lc",
+					"WORKSPACE=\"${workspaceFolder}\"; if [ -n \"$EMSDK\" ] && [ -f \"$EMSDK/emsdk_env.sh\" ]; then EMSDK_ROOT=\"$EMSDK\"; elif [ -f \"$WORKSPACE/../emsdk/emsdk_env.sh\" ]; then EMSDK_ROOT=\"$(cd \"$WORKSPACE/../emsdk\" && pwd)\"; else echo \"Unable to locate emsdk. Set EMSDK or place emsdk at ../emsdk relative to the workspace.\"; exit 1; fi; . \"$EMSDK_ROOT/emsdk_env.sh\" >/dev/null && cmake --build \"$WORKSPACE/build-wasm\""
+				],
+				"dependsOn": "Configure WASM",
+				"dependsOrder": "sequence",
+				"group": "build",
+				"problemMatcher": {
+					"owner": "cpp",
+					"fileLocation": [
+						"absolute"
+					],
+					"pattern": {
+						"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+						"file": 1,
+						"line": 2,
+						"column": 3,
+						"severity": 4,
+						"message": 5
+					}
+				}
+			},
+			{
+				"label": "Build WASM and Serve",
+				"dependsOn": "Build WASM",
+				"dependsOrder": "sequence",
+				"problemMatcher": []
 			}
 		],
 	},
@@ -262,6 +313,20 @@
 				"preLaunchTask": "Build",
 				"stopAtEntry": false,
 				"MIMode": "lldb"
+			},
+			{
+				"name": "Debug ElenixOS WASM (Chrome)",
+				"type": "pwa-chrome",
+				"request": "launch",
+				"preLaunchTask": "Build WASM",
+				"url": "http://127.0.0.1:5500/build-wasm/bin/main.html",
+				"webRoot": "${workspaceFolder}",
+				"sourceMaps": true,
+				"trace": false,
+				"resolveSourceMapLocations": [
+					"${workspaceFolder}/**",
+					"!**/node_modules/**"
+				]
 			},
 		],
 	},

@@ -3,11 +3,15 @@
  */
 
 // Includes
-#define _DEFAULT_SOURCE /* needed for usleep() */
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef __EMSCRIPTEN__
+#define _DEFAULT_SOURCE /* needed for usleep() */
 #include <unistd.h>
-#include <pthread.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten/html5.h>
+#endif
 #include "lvgl/lvgl.h"
 #include "lvgl/examples/lv_examples.h"
 #include "lvgl/demos/lv_demos.h"
@@ -50,6 +54,17 @@ static lv_display_t *hal_init(int32_t w, int32_t h);
 
 extern void freertos_main(void);
 
+#ifdef __EMSCRIPTEN__
+static EM_BOOL eos_main_loop_frame(double time, void *user_data)
+{
+  (void)time;
+  (void)user_data;
+
+  eos_main_loop();
+  return EM_TRUE;
+}
+#endif
+
 #ifdef _WIN32
 #define main SDL_main
 #endif
@@ -69,12 +84,16 @@ int main(int argc, char **argv)
   eos_logo_play(false);
   eos_sensor_register(EOS_SENSOR_TYPE_ACCE);
   eos_sensor_register(EOS_SENSOR_TYPE_BAT);
-  eos_run();
+  eos_init();
+#ifdef __EMSCRIPTEN__
+  emscripten_request_animation_frame_loop(eos_main_loop_frame, NULL);
+#else
   while (1)
   {
-    uint32_t d = lv_timer_handler();
+    uint32_t d = eos_main_loop();
     usleep(d * 1000);
   }
+#endif
   return 0;
 }
 

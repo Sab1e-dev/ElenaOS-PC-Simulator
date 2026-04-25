@@ -12,35 +12,52 @@ if(NOT WIN32)
 endif()
 add_compile_options(-Wno-unterminated-string-initialization)
 
-set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(EOS_PLATFORM "Native" CACHE STRING "ElenixOS simulator platform")
+set_property(CACHE EOS_PLATFORM PROPERTY STRINGS Native WASM)
+
+set(EOS_IS_WASM OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR EMSCRIPTEN OR EOS_PLATFORM STREQUAL "WASM")
+    set(EOS_IS_WASM ON)
+    set(EOS_PLATFORM "WASM" CACHE STRING "ElenixOS simulator platform" FORCE)
+else()
+    set(EOS_PLATFORM "Native" CACHE STRING "ElenixOS simulator platform" FORCE)
+endif()
+
+message(STATUS "ElenixOS simulator platform: ${EOS_PLATFORM}")
+
+if(EOS_IS_WASM)
+    set(ASSETS_DIR "/.simulator/img")
+else()
+    set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fs/.simulator/img")
+endif()
 add_definitions(-DASSETS_PATH=\"${ASSETS_DIR}/\")
 
 set(FREERTOS_PORT GCC_POSIX CACHE STRING "Port for FreeRTOS on Posix environment")
-
-# Set the correct FreeRTOS port for your system (e.g., Posix for WSL)
-set(FREERTOS_PORT GCC_POSIX CACHE STRING "Port for FreeRTOS on Posix environment")
-
 unset(USE_FREERTOS CACHE)
+option(USE_FREERTOS "Enable FreeRTOS" OFF)
 
-option(USE_FREERTOS "Enable FreeRTOS" OFF) # Turn this on to enable FreeRTOS
+if(EOS_IS_WASM AND USE_FREERTOS)
+    message(WARNING "USE_FREERTOS is not supported for WASM builds. Disabling it for EOS_PLATFORM=WASM.")
+    set(USE_FREERTOS OFF CACHE BOOL "Enable FreeRTOS" FORCE)
+endif()
 
 if(USE_FREERTOS)
     message(STATUS "FreeRTOS is enabled")
 
-    # FreeRTOS integration when USE_FREERTOS is enabled
     add_library(freertos_config INTERFACE)
     target_include_directories(freertos_config SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/config)
     target_compile_definitions(freertos_config INTERFACE projCOVERAGE_TEST=0)
 
-    # Add FreeRTOS as a subdirectory
     add_subdirectory(FreeRTOS)
 
-    # FreeRTOS-specific include directories
     include_directories(${PROJECT_SOURCE_DIR}/FreeRTOS/include)
     include_directories(${PROJECT_SOURCE_DIR}/FreeRTOS/portable/ThirdParty/GCC/Posix)
     include_directories(${PROJECT_SOURCE_DIR}/config)
 
-    # Add FreeRTOS sources
     file(GLOB FREERTOS_SOURCES
         "${PROJECT_SOURCE_DIR}/FreeRTOS/*.c"
         "${PROJECT_SOURCE_DIR}/FreeRTOS/portable/MemMang/heap_4.c"
@@ -48,47 +65,64 @@ if(USE_FREERTOS)
     )
 else()
     message(STATUS "FreeRTOS is disabled")
-    set(FREERTOS_SOURCES "") # No FreeRTOS sources if FreeRTOS is disabled
+    set(FREERTOS_SOURCES "")
 endif()
 
-# Main include files of the project
 include_directories(${PROJECT_SOURCE_DIR}/main/inc)
 include_directories(${PROJECT_SOURCE_DIR}/debugger_box)
 
-# Define options for LVGL with default values (OFF)
 option(LV_USE_DRAW_SDL "Use SDL draw unit" OFF)
 option(LV_USE_LIBPNG "Use libpng to decode PNG" OFF)
 option(LV_USE_LIBJPEG_TURBO "Use libjpeg turbo to decode JPEG" OFF)
 option(LV_USE_FFMPEG "Use libffmpeg to display video using lv_ffmpeg" OFF)
 option(LV_USE_FREETYPE "Use freetype library" OFF)
 
-# Set C and C++ standards
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Set the output path for the executable
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-# Find and include SDL2 library
-find_package(SDL2 REQUIRED)
+if(EOS_IS_WASM)
+    set(EOS_RUNTIME_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
+    set(EOS_WASM_LIVE_SERVER_PORT "5500" CACHE STRING "Live Server port for WASM debugging")
+    set(EOS_WASM_SOURCE_MAP_BASE
+        "http://127.0.0.1:${EOS_WASM_LIVE_SERVER_PORT}/build-wasm/bin/"
+        CACHE STRING "Public base URL used in generated WASM source maps"
+    )
 
-# Remove ARM-specific compile and linker options
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    add_compile_options(
+        "-sUSE_SDL=2"
+    )
+else()
+    set(EOS_RUNTIME_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/bin")
 
-# Add compile definitions based on the selected options
+    find_package(SDL2 REQUIRED)
+
+    add_compile_options(
+        -march=native
+    )
+endif()
+
 add_compile_definitions($<$<BOOL:${LV_USE_DRAW_SDL}>:LV_USE_DRAW_SDL=1>)
 add_compile_definitions($<$<BOOL:${LV_USE_LIBPNG}>:LV_USE_LIBPNG=1>)
 add_compile_definitions($<$<BOOL:${LV_USE_LIBJPEG_TURBO}>:LV_USE_LIBJPEG_TURBO=1>)
 add_compile_definitions($<$<BOOL:${LV_USE_FFMPEG}>:LV_USE_FFMPEG=1>)
+add_compile_definitions(EOS_PLATFORM_${EOS_PLATFORM}=1)
 
-# Add LVGL subdirectory
 add_subdirectory(lvgl)
-target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/lvgl/src ${PROJECT_SOURCE_DIR}/ElenixOS/third_party/jerryscript/jerry-core/include)
 
-# Keep third-party LVGL sources untouched: provide fixed-width integer types for ThorVG via compiler forced-include.
+if(EOS_IS_WASM)
+    target_include_directories(lvgl PUBLIC
+        ${PROJECT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/lvgl/src
+        ${PROJECT_SOURCE_DIR}/ElenixOS/third_party/jerryscript/jerry-core/include
+    )
+else()
+    target_include_directories(lvgl PUBLIC
+        ${PROJECT_SOURCE_DIR}
+        ${SDL2_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/lvgl/src
+        ${PROJECT_SOURCE_DIR}/ElenixOS/third_party/jerryscript/jerry-core/include
+    )
+endif()
+
 if(TARGET lvgl_thorvg)
     if(MSVC)
         target_compile_options(lvgl_thorvg PRIVATE /FIstdint.h)
@@ -97,34 +131,33 @@ if(TARGET lvgl_thorvg)
     endif()
 endif()
 
-# Create the main executable, depending on the FreeRTOS option
+set(EOS_MAIN_SOURCES
+    ${PROJECT_SOURCE_DIR}/main/src/main.c
+    ${PROJECT_SOURCE_DIR}/main/src/eos_port.c
+    ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
+    ${PROJECT_SOURCE_DIR}/main/src/mac_api.c
+    ${PROJECT_SOURCE_DIR}/main/src/mouse_cursor_icon.c
+)
+
 if(USE_FREERTOS)
-    add_executable(main
-        ${PROJECT_SOURCE_DIR}/main/src/main.c
-        ${PROJECT_SOURCE_DIR}/main/src/eos_port.c
-        ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
-        ${PROJECT_SOURCE_DIR}/main/src/mac_api.c
+    list(APPEND EOS_MAIN_SOURCES
         ${PROJECT_SOURCE_DIR}/main/src/freertos_main.cpp
-        ${PROJECT_SOURCE_DIR}/main/src/mouse_cursor_icon.c
         ${PROJECT_SOURCE_DIR}/main/src/FreeRTOS_Posix_Port.c
-        ${FREERTOS_SOURCES} # Add only if USE_FREERTOS is enabled
+        ${FREERTOS_SOURCES}
     )
-    # Link FreeRTOS libraries
-    target_link_libraries(main freertos_config FreeRTOS)
-else()
-    add_executable(main
-        ${PROJECT_SOURCE_DIR}/main/src/main.c
-        ${PROJECT_SOURCE_DIR}/main/src/eos_port.c
-        ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
-        ${PROJECT_SOURCE_DIR}/main/src/mac_api.c
-        ${PROJECT_SOURCE_DIR}/main/src/mouse_cursor_icon.c
-    )
+endif()
+
+add_executable(main ${EOS_MAIN_SOURCES})
+set_target_properties(main PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EOS_RUNTIME_OUTPUT_DIR}")
+
+if(USE_FREERTOS)
+    target_link_libraries(main PRIVATE freertos_config FreeRTOS)
 endif()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/ElenixOS)
 
-# Define LVGL configuration as a simple include
 target_compile_definitions(main PRIVATE LV_CONF_INCLUDE_SIMPLE)
+
 if(MSVC)
     target_link_options(main PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:elenixos_lib>")
 elseif(APPLE)
@@ -137,12 +170,43 @@ else()
     )
 endif()
 
-target_link_libraries(main
-    elenixos_lib
-    lvgl lvgl::examples lvgl::demos lvgl::thorvg ${SDL2_LIBRARIES} m pthread)
+if(EOS_IS_WASM)
+    set_target_properties(main PROPERTIES SUFFIX ".html")
+    target_link_options(main PRIVATE
+        "-sUSE_SDL=2"
+        "-sALLOW_MEMORY_GROWTH=1"
+        "-sSTACK_SIZE=1048576"
+        "-sASSERTIONS=1"
+        "-sSAFE_HEAP=0"
+        "-sEXIT_RUNTIME=0"
+        "-sNO_DISABLE_EXCEPTION_CATCHING"
+        "--preload-file=${PROJECT_SOURCE_DIR}/fs/.sys@/.sys"
+        "--preload-file=${PROJECT_SOURCE_DIR}/fs/.simulator@/.simulator"
+        "--source-map-base=${EOS_WASM_SOURCE_MAP_BASE}"
+    )
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_options(main PRIVATE -gsource-map)
+        target_link_options(main PRIVATE -gsource-map)
+    endif()
+else()
+    target_link_libraries(main PRIVATE
+        elenixos_lib
+        lvgl lvgl::examples lvgl::demos lvgl::thorvg
+        ${SDL2_LIBRARIES}
+        m
+        pthread
+    )
+endif()
+
+if(EOS_IS_WASM)
+    target_link_libraries(main PRIVATE
+        elenixos_lib
+        lvgl lvgl::examples lvgl::demos lvgl::thorvg
+    )
+endif()
 
 if(WIN32 AND MINGW)
-    # Copy MinGW runtime and SDL2 DLLs next to main.exe for direct launch.
     get_filename_component(MINGW_BIN_DIR ${CMAKE_C_COMPILER} DIRECTORY)
     set(WIN_RUNTIME_DLLS
         libgcc_s_seh-1.dll
@@ -160,52 +224,40 @@ if(WIN32 AND MINGW)
     endforeach()
 endif()
 
-# Only link freertos_config if the FreeRTOS directory exists
-if(USE_FREERTOS)
-    target_link_libraries(main freertos_config)
-endif()
+add_custom_target(run COMMAND ${EOS_RUNTIME_OUTPUT_DIR}/main DEPENDS main)
 
-# Custom target to run the executable
-add_custom_target(run COMMAND ${EXECUTABLE_OUTPUT_PATH}/main DEPENDS main)
-
-# Conditionally include and link SDL2_image if LV_USE_DRAW_SDL is enabled
-if(LV_USE_DRAW_SDL)
+if(LV_USE_DRAW_SDL AND NOT EOS_IS_WASM)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
     find_package(SDL2_image REQUIRED)
     target_include_directories(lvgl PUBLIC ${SDL2_IMAGE_INCLUDE_DIRS})
-    target_link_libraries(main ${SDL2_IMAGE_LIBRARIES})
+    target_link_libraries(main PRIVATE ${SDL2_IMAGE_LIBRARIES})
 endif()
 
-# Conditionally include and link libpng if LV_USE_LIBPNG is enabled
 if(LV_USE_LIBPNG)
     find_package(PNG REQUIRED)
     target_include_directories(lvgl PUBLIC ${PNG_INCLUDE_DIRS})
-    target_link_libraries(main ${PNG_LIBRARIES})
+    target_link_libraries(main PRIVATE ${PNG_LIBRARIES})
 endif()
 
-# Conditionally include and link libjpeg-turbo if LV_USE_LIBJPEG_TURBO is enabled
 if(LV_USE_LIBJPEG_TURBO)
     find_package(JPEG REQUIRED)
     target_include_directories(lvgl PUBLIC ${JPEG_INCLUDE_DIRS})
-    target_link_libraries(main ${JPEG_LIBRARIES})
+    target_link_libraries(main PRIVATE ${JPEG_LIBRARIES})
 endif()
 
-# Conditionally include and link FFmpeg libraries if LV_USE_FFMPEG is enabled
 if(LV_USE_FFMPEG)
-    target_link_libraries(main avformat avcodec avutil swscale z)
+    target_link_libraries(main PRIVATE avformat avcodec avutil swscale z)
 endif()
 
-# Conditionally include and link FreeType if LV_USE_FREETYPE is enabled
 if(LV_USE_FREETYPE)
     find_package(Freetype REQUIRED)
     target_include_directories(lvgl PUBLIC ${FREETYPE_INCLUDE_DIRS})
-    target_link_libraries(main ${FREETYPE_LIBRARIES})
+    target_link_libraries(main PRIVATE ${FREETYPE_LIBRARIES})
 endif()
 
-# --- Add macOS frameworks ---
-if(APPLE)
+if(APPLE AND NOT EOS_IS_WASM)
     message(STATUS "Building on macOS: linking CoreAudio and AudioToolbox frameworks")
-    target_link_libraries(main
+    target_link_libraries(main PRIVATE
         "-framework CoreAudio"
         "-framework AudioToolbox"
         "-framework IOKit"
@@ -213,7 +265,6 @@ if(APPLE)
     )
 endif()
 
-# Apply additional compile options if the build type is Debug
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Debug mode enabled")
 
@@ -227,10 +278,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         -Wextra
         -Wformat-security
         -Wmaybe-uninitialized
-        # -Wmissing-prototypes
         -Wpointer-arith
         -Wmultichar
-        -Wno-pedantic # ignored for now, we convert functions to pointers for properties table.
+        -Wno-pedantic
         -Wreturn-type
         -Wshadow
         -Wshift-negative-value
@@ -246,7 +296,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(ASAN)
         message(STATUS "AddressSanitizer enabled")
 
-        # Add AddressSanitizer flags
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
