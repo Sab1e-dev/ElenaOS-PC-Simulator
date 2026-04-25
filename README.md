@@ -40,6 +40,49 @@ The usage guide has been moved to the ElenixOS documentation site.
 Please read:
 https://docs.elenixos.com/docs/simulator/overview
 
+## WASM publish to GitHub Pages
+
+This repository includes the workflow `.github/workflows/deploy-wasm-pages.yml`.
+It builds the WASM target and publishes the output to GitHub Pages automatically on pushes to `main`.
+
+After enabling Pages in repository settings (`Build and deployment -> Source: GitHub Actions`), artifacts are published to:
+
+- `https://<owner>.github.io/<repo>/wasm/latest/main.html`
+- `https://<owner>.github.io/<repo>/wasm/latest/main.js`
+- `https://<owner>.github.io/<repo>/wasm/latest/main.wasm`
+- `https://<owner>.github.io/<repo>/wasm/latest/main.data`
+
+The workflow also keeps a commit-pinned copy under:
+
+- `https://<owner>.github.io/<repo>/wasm/<sha7>/...`
+
+Use `latest` for always-updated preview links, and use `<sha7>` for stable references in external pages.
+
+### How to use in another page
+
+If your page is hosted under the same GitHub Pages site, you can link directly:
+
+```html
+<a href="/ElenixOS-Simulator/wasm/latest/main.html" target="_blank" rel="noopener">Open ElenixOS Simulator</a>
+```
+
+Or embed it in an iframe:
+
+```html
+<iframe
+	src="/ElenixOS-Simulator/wasm/latest/main.html"
+	width="100%"
+	height="720"
+	style="border:0"
+	loading="lazy"
+	referrerpolicy="no-referrer"
+></iframe>
+```
+
+If your page is hosted elsewhere, replace with the full absolute URL:
+
+`https://<owner>.github.io/<repo>/wasm/latest/main.html`
+
 ## Optional library
 
 There are also FreeType and FFmpeg support. You can install these according to the followings:

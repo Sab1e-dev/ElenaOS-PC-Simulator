@@ -1,0 +1,100 @@
+name: Deploy WASM to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CMakeLists.txt"
+      - "main/**"
+      - "fs/**"
+      - "ElenixOS/**"
+      - "lvgl/**"
+      - "lv_drivers/**"
+      - "FreeRTOS/**"
+      - ".github/workflows/deploy-wasm-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.11
+
+      - name: Configure WASM build
+        run: emcmake cmake -S . -B build-wasm -DEOS_PLATFORM=WASM -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build WASM artifacts
+        run: cmake --build build-wasm --parallel
+
+      - name: Prepare Pages site
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA}"
+          SHORT_SHA="${SHA::7}"
+          SITE_DIR="_site"
+          SRC_DIR="build-wasm/bin"
+
+          mkdir -p "${SITE_DIR}/wasm/latest"
+          mkdir -p "${SITE_DIR}/wasm/${SHORT_SHA}"
+
+          cp -a "${SRC_DIR}/." "${SITE_DIR}/wasm/latest/"
+          cp -a "${SRC_DIR}/." "${SITE_DIR}/wasm/${SHORT_SHA}/"
+
+          cat > "${SITE_DIR}/index.html" <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>ElenixOS Simulator WASM</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 2rem; line-height: 1.6; }
+              code { background: #f2f2f2; padding: 0.1rem 0.4rem; border-radius: 4px; }
+            </style>
+          </head>
+          <body>
+            <h1>ElenixOS Simulator WASM Artifacts</h1>
+            <p>Latest entry:</p>
+            <p><a href="./wasm/latest/main.html">./wasm/latest/main.html</a></p>
+            <p>Versioned artifacts are available at <code>./wasm/&lt;commit-sha7&gt;/</code>.</p>
+          </body>
+          </html>
+          EOF
+
+          touch "${SITE_DIR}/.nojekyll"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
