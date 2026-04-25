@@ -38,11 +38,16 @@ jobs:
         with:
           version: 4.0.11
 
+      - name: Prebuild Emscripten SDL2 cache
+        run: |
+          set -euo pipefail
+          embuilder build sdl2
+
       - name: Configure WASM build
         run: emcmake cmake -S . -B build-wasm -DEOS_PLATFORM=WASM -DCMAKE_BUILD_TYPE=Release
 
       - name: Build WASM artifacts
-        run: cmake --build build-wasm --parallel
+        run: cmake --build build-wasm --parallel 1
 
       - name: Prepare Pages site
         run: |
