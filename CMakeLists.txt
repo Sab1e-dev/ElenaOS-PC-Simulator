@@ -177,12 +177,17 @@ if(EOS_IS_WASM)
     # Emscripten automatically handles the preload-file dependencies
     set_property(TARGET main APPEND PROPERTY LINK_DEPENDS
         "${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
+        "${PROJECT_SOURCE_DIR}/main/static/WatchCard.png"
+        "${PROJECT_SOURCE_DIR}/main/static/Crown.png"
+        "${PROJECT_SOURCE_DIR}/main/static/SideButton.png"
     )
 
     # Create a custom target to monitor fs directory changes without forcing rebuild
     # If fs/.sys or fs/.simulator are modified, users should manually rebuild
     add_custom_command(TARGET main PRE_LINK
         COMMAND ${CMAKE_COMMAND} -E make_directory "${EOS_RUNTIME_OUTPUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "${EOS_RUNTIME_OUTPUT_DIR}/static"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/main/static" "${EOS_RUNTIME_OUTPUT_DIR}/static"
         COMMENT "Ensure WASM runtime output directory exists"
         VERBATIM
     )

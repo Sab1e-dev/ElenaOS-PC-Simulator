@@ -175,7 +175,7 @@
 </head>
 <body>
   <div id="app-shell">
-    <img id="watch-frame" src="/fs/.simulator/img/WatchCard.png" alt="watch frame">
+    <img id="watch-frame" src="./static/WatchCard.png" alt="watch frame">
     <div id="display-stage">
       <canvas id="canvas" width="390" height="450" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
       <div id="loading-overlay" role="status" aria-live="polite" aria-label="loading wasm">
@@ -200,8 +200,8 @@
     var loadingBarsEl = document.getElementById('loading-bars');
     var crownBtn = document.getElementById('btn-crown');
     var sideBtn = document.getElementById('btn-side');
-    var CROWN_BTN_IMG_URL = '/fs/.simulator/img/Crown.png';
-    var SIDE_BTN_IMG_URL = '/fs/.simulator/img/SideButton.png';
+    var CROWN_BTN_IMG_URL = './static/Crown.png';
+    var SIDE_BTN_IMG_URL = './static/SideButton.png';
     var LOADING_BAR_COUNT = 60;
     var loadingBars = [];
 
