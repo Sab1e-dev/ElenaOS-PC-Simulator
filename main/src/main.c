@@ -106,7 +106,6 @@ int main(int argc, char **argv)
   /*Initialize the HAL (display, input devices, tick) for LVGL*/
   hal_init(WINDOW_WIDTH, WINDOW_HEIGHT);
 
-  eos_logo_play(false);
   eos_sensor_register(EOS_SENSOR_TYPE_ACCE);
   eos_sensor_register(EOS_SENSOR_TYPE_BAT);
   eos_init();

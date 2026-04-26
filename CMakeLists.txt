@@ -32,7 +32,7 @@ message(STATUS "ElenixOS simulator platform: ${EOS_PLATFORM}")
 if(EOS_IS_WASM)
     set(ASSETS_DIR "/.simulator/img")
 else()
-    set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fs/.simulator/img")
+    set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/native/")
 endif()
 add_definitions(-DASSETS_PATH=\"${ASSETS_DIR}/\")
 
