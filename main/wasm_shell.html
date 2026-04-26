@@ -47,6 +47,7 @@
       height: 450px;
       border-radius: 80px;
       overflow: hidden;
+      transform: scale(0.48);
     }
 
     #canvas {
@@ -63,7 +64,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(10, 12, 16, 0.28);
+      background:
+        radial-gradient(circle at center, rgba(32, 40, 54, 0.38) 0%, rgba(10, 12, 16, 0.18) 45%, rgba(10, 12, 16, 0.55) 100%);
+      backdrop-filter: blur(3px);
       z-index: 2;
       transition: opacity 180ms ease;
     }
@@ -75,26 +78,60 @@
     }
 
     #loading-panel {
-      width: 220px;
+      width: 390px;
+      height: 450px;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: stretch;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: #f5f7fa;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      align-items: center;
+      justify-content: center;
     }
 
-    #loading-text {
-      font-size: 13px;
-      text-align: center;
-      letter-spacing: 0.2px;
+    #loading-ring {
+      position: relative;
+      width: 390px;
+      height: 390px;
+      border-radius: 50%;
     }
 
-    #loading-progress {
+    #loading-bars {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+    }
+
+    .loading-bar {
+      position: absolute;
+      left: 50%;
+      top: 50%;
       width: 100%;
-      height: 8px;
-      accent-color: #67d4ff;
+      height: 100%;
+      margin-left: -50%;
+      margin-top: -50%;
+      border-radius: 999px;
+      background: transparent;
+      transform-origin: center center;
+      opacity: 0.16;
+    }
+
+    .loading-bar::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 3px;
+      height: 20px;
+      margin-left: -1.5px;
+      margin-top: -191px;
+      border-radius: 999px;
+      background: white;
+      transform-origin: center 191px;
+    }
+
+    .loading-bar.active {
+      opacity: 1;
+    }
+
+    .loading-bar.active::before {
+      background: white;
     }
 
     #bridge-controls {
@@ -122,29 +159,30 @@
     }
 
     #btn-crown {
-      left: 467px;
-      top: 130px;
-      width: 25px;
-      height: 65px;
+      left: 355px;
+      top: 170px;
+      width: 19px;
+      height: 80px;
     }
 
     #btn-side {
-      left: 470px;
-      top: 290px;
-      width: 13px;
-      height: 99px;
+      left: 360px;
+      top: 249px;
+      width: 8px;
+      height: 80px;
     }
   </style>
 </head>
 <body>
   <div id="app-shell">
-    <img id="watch-frame" src="/fs/.simulator/img/SimulatorMask.png" alt="watch frame">
+    <img id="watch-frame" src="/fs/.simulator/img/WatchCard.png" alt="watch frame">
     <div id="display-stage">
       <canvas id="canvas" width="390" height="450" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
       <div id="loading-overlay" role="status" aria-live="polite" aria-label="loading wasm">
         <div id="loading-panel">
-          <div id="loading-text">Loading... 0%</div>
-          <progress id="loading-progress" max="100" value="0"></progress>
+          <div id="loading-ring" aria-hidden="true">
+            <div id="loading-bars"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -159,12 +197,42 @@
     var FIXED_HEIGHT = 450;
     var canvasEl = document.getElementById('canvas');
     var loadingOverlayEl = document.getElementById('loading-overlay');
-    var loadingTextEl = document.getElementById('loading-text');
-    var loadingProgressEl = document.getElementById('loading-progress');
+    var loadingBarsEl = document.getElementById('loading-bars');
     var crownBtn = document.getElementById('btn-crown');
     var sideBtn = document.getElementById('btn-side');
-    var CROWN_BTN_IMG_URL = '/fs/.simulator/img/SimulatorCrown.png';
-    var SIDE_BTN_IMG_URL = '/fs/.simulator/img/SimulatorSideButton.png';
+    var CROWN_BTN_IMG_URL = '/fs/.simulator/img/Crown.png';
+    var SIDE_BTN_IMG_URL = '/fs/.simulator/img/SideButton.png';
+    var LOADING_BAR_COUNT = 60;
+    var loadingBars = [];
+
+    function buildLoadingBars() {
+      if (!loadingBarsEl || loadingBars.length > 0) {
+        return;
+      }
+
+      for (var i = 0; i < LOADING_BAR_COUNT; i++) {
+        var bar = document.createElement('span');
+        var angle = i * (360 / LOADING_BAR_COUNT);
+
+        bar.className = 'loading-bar';
+        bar.style.transform = 'rotate(' + angle + 'deg)';
+        loadingBarsEl.appendChild(bar);
+        loadingBars.push(bar);
+      }
+    }
+
+    function updateLoadingBars(percent) {
+      var safePercent = Math.max(0, Math.min(100, percent));
+      var activeCount = Math.round((safePercent / 100) * loadingBars.length);
+
+      for (var i = 0; i < loadingBars.length; i++) {
+        if (i < activeCount) {
+          loadingBars[i].classList.add('active');
+        } else {
+          loadingBars[i].classList.remove('active');
+        }
+      }
+    }
 
     function setButtonImage(btn, imageUrl, fallbackText) {
       var img = new Image();
@@ -202,13 +270,54 @@
       }
     }
 
-    function enforceCanvasSize() {
-      canvasEl.style.width = FIXED_WIDTH + 'px';
-      canvasEl.style.height = FIXED_HEIGHT + 'px';
+    function blockResizeEvents() {
+      window.addEventListener('resize', function(event) {
+        event.stopImmediatePropagation();
+      }, true);
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function(event) {
+          event.stopImmediatePropagation();
+        }, true);
+      }
     }
 
-    enforceCanvasSize();
-    window.addEventListener('resize', enforceCanvasSize);
+    function lockCanvasDimensionProperty(propertyName, fixedValue) {
+      var descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, propertyName);
+
+      if (!descriptor || typeof descriptor.get !== 'function' || typeof descriptor.set !== 'function') {
+        return;
+      }
+
+      Object.defineProperty(canvasEl, propertyName, {
+        configurable: true,
+        enumerable: true,
+        get: function() {
+          return descriptor.get.call(canvasEl);
+        },
+        set: function(value) {
+          if (value === fixedValue) {
+            descriptor.set.call(canvasEl, value);
+          }
+        }
+      });
+    }
+
+    blockResizeEvents();
+    function lockCanvasSize() {
+      canvasEl.width = FIXED_WIDTH;
+      canvasEl.height = FIXED_HEIGHT;
+      lockCanvasDimensionProperty('width', FIXED_WIDTH);
+      lockCanvasDimensionProperty('height', FIXED_HEIGHT);
+      canvasEl.style.width = FIXED_WIDTH + 'px';
+      canvasEl.style.height = FIXED_HEIGHT + 'px';
+      canvasEl.style.minWidth = FIXED_WIDTH + 'px';
+      canvasEl.style.minHeight = FIXED_HEIGHT + 'px';
+      canvasEl.style.maxWidth = FIXED_WIDTH + 'px';
+      canvasEl.style.maxHeight = FIXED_HEIGHT + 'px';
+    }
+
+    lockCanvasSize();
     setButtonImage(crownBtn, CROWN_BTN_IMG_URL, 'C');
     setButtonImage(sideBtn, SIDE_BTN_IMG_URL, 'S');
 
@@ -220,8 +329,7 @@
 
     function showLoadingProgress(percent, text) {
       var safePercent = Math.max(0, Math.min(100, percent));
-      loadingProgressEl.value = safePercent;
-      loadingTextEl.textContent = text || ('Loading... ' + safePercent + '%');
+      updateLoadingBars(safePercent);
       loadingOverlayEl.classList.remove('hidden');
 
       if (safePercent >= 100) {
@@ -244,11 +352,11 @@
         var current = Number(match[1]);
         var total = Number(match[2]);
         var percent = total > 0 ? Math.round((current / total) * 100) : 0;
-        showLoadingProgress(percent, 'Loading... ' + percent + '%');
+        showLoadingProgress(percent);
         return;
       }
 
-      showLoadingProgress(0, text);
+      showLoadingProgress(0);
     }
 
     var Module = {
@@ -270,6 +378,7 @@
       }
     };
 
+    buildLoadingBars();
     Module.setStatus('Preparing...');
 
     var ELENIX_MSG_NAMESPACE = 'ElenixOS';

@@ -70,8 +70,10 @@ extern void freertos_main(void);
 #ifdef __EMSCRIPTEN__
 static void lock_canvas_size(void)
 {
-  emscripten_set_canvas_element_size("#canvas", WINDOW_WIDTH, WINDOW_HEIGHT);
-  emscripten_set_element_css_size("#canvas", (double)WINDOW_WIDTH, (double)WINDOW_HEIGHT);
+  const uint16_t canvas_width = WINDOW_WIDTH;
+  const uint16_t canvas_height = WINDOW_HEIGHT;
+  emscripten_set_canvas_element_size("#canvas", canvas_width, canvas_height);
+  emscripten_set_element_css_size("#canvas", (double)canvas_width, (double)canvas_height);
 }
 
 static EM_BOOL eos_main_loop_frame(double time, void *user_data)

@@ -173,22 +173,17 @@ endif()
 if(EOS_IS_WASM)
     set_target_properties(main PROPERTIES SUFFIX ".html")
 
-    file(GLOB_RECURSE WASM_PRELOAD_FILES
-        LIST_DIRECTORIES false
-        CONFIGURE_DEPENDS
-        "${PROJECT_SOURCE_DIR}/fs/.sys/*"
-        "${PROJECT_SOURCE_DIR}/fs/.simulator/*"
-    )
-
+    # Only add actual input files as dependencies, not globs
+    # Emscripten automatically handles the preload-file dependencies
     set_property(TARGET main APPEND PROPERTY LINK_DEPENDS
         "${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
-        ${WASM_PRELOAD_FILES}
     )
 
+    # Create a custom target to monitor fs directory changes without forcing rebuild
+    # If fs/.sys or fs/.simulator are modified, users should manually rebuild
     add_custom_command(TARGET main PRE_LINK
-        COMMAND ${CMAKE_COMMAND} -E remove_directory "${EOS_RUNTIME_OUTPUT_DIR}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${EOS_RUNTIME_OUTPUT_DIR}"
-        COMMENT "Clean WASM runtime output directory to force main.data regeneration"
+        COMMENT "Ensure WASM runtime output directory exists"
         VERBATIM
     )
 
