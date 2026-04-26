@@ -5,12 +5,14 @@
 // Includes
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #ifndef __EMSCRIPTEN__
 #define _DEFAULT_SOURCE /* needed for usleep() */
 #include <unistd.h>
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
+#include <emscripten/emscripten.h>
 #endif
 #include "lvgl/lvgl.h"
 #include "lvgl/examples/lv_examples.h"
@@ -18,14 +20,25 @@
 #if LV_USE_OS == LV_OS_ELENAOS
 #include "elenix_os.h"
 #include "eos_img.h"
+#include "eos_app.h"
+#include "eos_app_list.h"
+#include "eos_activity.h"
+#include "eos_fs.h"
+#include "eos_mem.h"
+#include "script_engine_core.h"
 #endif
 
 // Macros and Definitions
 
 #define SIMULATOR_CONTAINER_WIDTH 500
 #define SIMULATOR_CONTAINER_HEIGHT 520
+#ifdef __EMSCRIPTEN__
+#define WINDOW_WIDTH EOS_DISPLAY_WIDTH
+#define WINDOW_HEIGHT EOS_DISPLAY_HEIGHT
+#else
 #define WINDOW_WIDTH SIMULATOR_CONTAINER_WIDTH
 #define WINDOW_HEIGHT SIMULATOR_CONTAINER_HEIGHT
+#endif
 #define LV_USE_MOUSE_CURSOR_IMAGE 0
 
 #define _RIGHT_FRAME_X 470
@@ -55,6 +68,12 @@ static lv_display_t *hal_init(int32_t w, int32_t h);
 extern void freertos_main(void);
 
 #ifdef __EMSCRIPTEN__
+static void lock_canvas_size(void)
+{
+  emscripten_set_canvas_element_size("#canvas", WINDOW_WIDTH, WINDOW_HEIGHT);
+  emscripten_set_element_css_size("#canvas", (double)WINDOW_WIDTH, (double)WINDOW_HEIGHT);
+}
+
 static EM_BOOL eos_main_loop_frame(double time, void *user_data)
 {
   (void)time;
@@ -78,6 +97,10 @@ int main(int argc, char **argv)
   lv_init();
   lv_lodepng_init();
 
+#ifdef __EMSCRIPTEN__
+  lock_canvas_size();
+#endif
+
   /*Initialize the HAL (display, input devices, tick) for LVGL*/
   hal_init(WINDOW_WIDTH, WINDOW_HEIGHT);
 
@@ -97,6 +120,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
+#ifndef __EMSCRIPTEN__
 static void _crown_clicked_cb(lv_event_t *e)
 {
   eos_crown_button_report(EOS_BUTTON_STATE_CLICKED);
@@ -106,6 +130,118 @@ static void _side_button_clicked_cb(lv_event_t *e)
 {
   eos_side_button_report(EOS_BUTTON_STATE_CLICKED);
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE void eos_wasm_crown_click(void)
+{
+  eos_crown_button_report(EOS_BUTTON_STATE_CLICKED);
+}
+
+static char *g_wasm_last_read_code = NULL;
+
+EMSCRIPTEN_KEEPALIVE void eos_wasm_side_click(void)
+{
+  eos_side_button_report(EOS_BUTTON_STATE_CLICKED);
+}
+
+EMSCRIPTEN_KEEPALIVE int eos_wasm_launch_app_by_id(const char *app_id)
+{
+  if (!(app_id && app_id[0]))
+  {
+    return 0;
+  }
+
+  return eos_app_launch_immediately(app_id) == EOS_OK ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int eos_wasm_reload_current_script(void)
+{
+  return script_engine_reload_current_script() == SE_OK ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int eos_wasm_back_to_watchface(void)
+{
+  return eos_activity_back_to_watchface() == EOS_OK ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int eos_wasm_write_app_main_js(const char *app_id, const char *code)
+{
+  if (!(app_id && app_id[0] && code))
+  {
+    return 0;
+  }
+
+  if (!eos_app_list_contains(app_id))
+  {
+    return 0;
+  }
+
+  char script_path[PATH_MAX];
+  int path_len = snprintf(script_path,
+                          sizeof(script_path),
+                          EOS_APP_INSTALLED_DIR "%s/" EOS_APP_SCRIPT_ENTRY_FILE_NAME,
+                          app_id);
+  if (path_len <= 0 || path_len >= (int)sizeof(script_path))
+  {
+    return 0;
+  }
+
+  eos_file_t fp = eos_fs_open_write(script_path);
+  if (fp == EOS_FILE_INVALID)
+  {
+    return 0;
+  }
+
+  size_t code_len = strlen(code);
+  if (code_len > 0)
+  {
+    int written = eos_fs_write(fp, code, code_len);
+    eos_fs_close(fp);
+    return written == (int)code_len ? 1 : 0;
+  }
+
+  eos_fs_close(fp);
+  return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE const char *eos_wasm_read_app_main_js(const char *app_id)
+{
+  if (g_wasm_last_read_code)
+  {
+    eos_free(g_wasm_last_read_code);
+    g_wasm_last_read_code = NULL;
+  }
+
+  if (!(app_id && app_id[0]))
+  {
+    return NULL;
+  }
+
+  if (!eos_app_list_contains(app_id))
+  {
+    return NULL;
+  }
+
+  char script_path[PATH_MAX];
+  int path_len = snprintf(script_path,
+                          sizeof(script_path),
+                          EOS_APP_INSTALLED_DIR "%s/" EOS_APP_SCRIPT_ENTRY_FILE_NAME,
+                          app_id);
+  if (path_len <= 0 || path_len >= (int)sizeof(script_path))
+  {
+    return NULL;
+  }
+
+  if (!eos_is_file(script_path))
+  {
+    return NULL;
+  }
+
+  g_wasm_last_read_code = eos_fs_read_file(script_path);
+  return g_wasm_last_read_code;
+}
+#endif
 
 typedef struct
 {
@@ -127,13 +263,66 @@ static void _mouse_wheel_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
  * Initialize the Hardware Abstraction Layer (HAL) for the LVGL graphics
  * library
  */
+#ifdef __EMSCRIPTEN__
 static lv_display_t *hal_init(int32_t w, int32_t h)
 {
   lv_group_set_default(lv_group_create());
 
   lv_display_t *disp = lv_sdl_window_create(w, h);
   lv_sdl_window_set_resizeable(disp, false);
-  lv_sdl_window_set_title(disp, "ElenixOS PC Simulator");
+  lv_sdl_window_set_title(disp, "ElenixOS Simulator");
+
+#if LV_USE_SYSMON
+#if LV_USE_PERF_MONITOR
+  lv_sysmon_hide_performance(disp);
+#endif /*LV_USE_PERF_MONITOR*/
+#if LV_USE_MEM_MONITOR
+  lv_sysmon_hide_memory(disp);
+#endif /*LV_USE_MEM_MONITOR*/
+#endif /* LV_USE_SYSMON */
+  lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_TRANSP, 0);
+
+  lv_indev_t *mouse = lv_sdl_mouse_create();
+  lv_indev_set_group(mouse, lv_group_get_default());
+  lv_indev_set_display(mouse, disp);
+  lv_display_set_default(disp);
+
+#if LV_USE_MOUSE_CURSOR_IMAGE
+  LV_IMAGE_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
+  lv_obj_t *cursor_obj;
+  cursor_obj = lv_image_create(lv_screen_active()); /*Create an image object for the cursor */
+  lv_image_set_src(cursor_obj, &mouse_cursor_icon); /*Set the image source*/
+  lv_indev_set_cursor(mouse, cursor_obj);           /*Connect the image  object to the driver*/
+#endif
+
+  lv_indev_t *mousewheel = lv_sdl_mousewheel_create();
+  lv_indev_set_read_cb(mousewheel, _mouse_wheel_read_cb);
+
+  lv_indev_t *kb = lv_sdl_keyboard_create();
+  lv_indev_set_display(kb, disp);
+  lv_indev_set_group(kb, lv_group_get_default());
+
+  brightness_mask = lv_obj_create(lv_layer_sys());
+  lv_obj_set_size(brightness_mask, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  lv_obj_set_style_bg_color(brightness_mask, lv_color_black(), 0);
+  lv_obj_set_style_border_width(brightness_mask, 0, 0);
+  lv_obj_set_style_opa(brightness_mask, LV_OPA_TRANSP, 0);
+  lv_obj_remove_flag(brightness_mask, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_move_foreground(brightness_mask);
+  lv_obj_center(brightness_mask);
+
+  return disp;
+}
+#else
+static lv_display_t *hal_init(int32_t w, int32_t h)
+{
+  lv_group_set_default(lv_group_create());
+
+  lv_display_t *disp = lv_sdl_window_create(w, h);
+  lv_sdl_window_set_resizeable(disp, false);
+  lv_sdl_window_set_title(disp, "ElenixOS Simulator");
+
+  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_white(), 0);
 
   lv_indev_t *mouse = lv_sdl_mouse_create();
   lv_indev_set_group(mouse, lv_group_get_default());
@@ -157,16 +346,36 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   lv_indev_set_display(kb, disp);
   lv_indev_set_group(kb, lv_group_get_default());
 
-  lv_obj_t *scr = lv_screen_active();
-  lv_obj_t *simulator_container = lv_obj_create(scr);
+  lv_obj_t *simulator_container = lv_obj_create(lv_screen_active());
   lv_obj_remove_style_all(simulator_container);
   lv_obj_set_size(simulator_container, SIMULATOR_CONTAINER_WIDTH, SIMULATOR_CONTAINER_HEIGHT);
   lv_obj_remove_flag(simulator_container, LV_OBJ_FLAG_SCROLLABLE);
 
-  const uint8_t layer1 = 1;
+  const uint16_t frame_width = 20;
+  const uint16_t frame_outline_width = 10;
+  const uint16_t watch_frame_width = EOS_DISPLAY_WIDTH + (frame_width) * 2;
+  const uint16_t watch_frame_height = EOS_DISPLAY_HEIGHT + (frame_width) * 2;
+  lv_obj_t *watch_frame = lv_obj_create(simulator_container);
+  lv_obj_remove_style_all(watch_frame);
+  lv_obj_set_size(watch_frame, watch_frame_width, watch_frame_height);
+  lv_obj_center(watch_frame);
+  lv_obj_set_style_bg_color(watch_frame, lv_color_black(), 0);
+  lv_obj_set_style_bg_opa(watch_frame, LV_OPA_COVER, 0);
+  lv_obj_set_style_radius(watch_frame, EOS_DISPLAY_RADIUS + frame_width, 0);
+  lv_obj_set_style_outline_color(watch_frame, lv_color_hex(0x1f1f1f), 0);
+  lv_obj_set_style_outline_opa(watch_frame, LV_OPA_COVER, 0);
+  lv_obj_set_style_outline_width(watch_frame, frame_outline_width, 0);
+  lv_obj_set_style_outline_pad(watch_frame, -2, 0);
 
-  // 内层显示器
-  disp = eos_virtual_display_create(simulator_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  lv_obj_t *vd_container = lv_obj_create(simulator_container);
+  lv_obj_remove_style_all(vd_container);
+  lv_obj_set_size(vd_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  lv_obj_center(vd_container);
+  lv_obj_remove_flag(vd_container, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_radius(vd_container, EOS_DISPLAY_RADIUS, 0);
+  lv_obj_set_style_clip_corner(vd_container, true, 0);
+
+  disp = eos_virtual_display_create(vd_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
   LV_ASSERT(disp != NULL);
   lv_display_set_default(disp);
 #if LV_USE_PERF_MONITOR
@@ -174,14 +383,7 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   lv_sysmon_hide_memory(disp);
 #endif /* LV_USE_PERF_MONITOR */
 
-  lv_obj_t *mask = lv_image_create(simulator_container);
-  printf("Assets: %s\n", ASSETS_PATH);
-  lv_image_set_src(mask, "A:" ASSETS_PATH "SimulatorMask.png");
-  lv_obj_center(mask);
-  lv_obj_remove_flag(mask, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_move_to_index(mask, layer1);
-
-  brightness_mask = lv_obj_create(lv_layer_top());
+  brightness_mask = lv_obj_create(lv_layer_sys());
   lv_obj_set_size(brightness_mask, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
   lv_obj_set_style_bg_color(brightness_mask, lv_color_black(), 0);
   lv_obj_set_style_border_width(brightness_mask, 0, 0);
@@ -216,3 +418,4 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
 
   return disp;
 }
+#endif

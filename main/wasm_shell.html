@@ -10,7 +10,7 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #0d1117;
+      background: transparent;
     }
 
     body {
@@ -21,55 +21,469 @@
     }
 
     #app-shell {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative;
+      width: 500px;
+      height: 520px;
+      flex: 0 0 auto;
+      background: transparent;
+    }
+
+    #watch-frame {
+      position: absolute;
+      inset: 0;
+      width: 500px;
+      height: 520px;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    #display-stage {
+      position: absolute;
+      left: 55px;
+      top: 35px;
+      width: 390px;
+      height: 450px;
+      border-radius: 80px;
+      overflow: hidden;
     }
 
     #canvas {
+      width: 390px;
+      height: 450px;
       display: block;
-      background: #000;
+      background: transparent;
       outline: none;
+    }
+
+    #loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 12, 16, 0.28);
+      z-index: 2;
+      transition: opacity 180ms ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+    }
+
+    #loading-panel {
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: #f5f7fa;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    #loading-text {
+      font-size: 13px;
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+
+    #loading-progress {
+      width: 100%;
+      height: 8px;
+      accent-color: #67d4ff;
+    }
+
+    #bridge-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .bridge-btn {
+      position: absolute;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      padding: 0;
+    }
+
+    .bridge-btn:active {
+      filter: brightness(0.88);
+    }
+
+    #btn-crown {
+      left: 467px;
+      top: 130px;
+      width: 25px;
+      height: 65px;
+    }
+
+    #btn-side {
+      left: 470px;
+      top: 290px;
+      width: 13px;
+      height: 99px;
     }
   </style>
 </head>
 <body>
   <div id="app-shell">
-    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    <img id="watch-frame" src="/fs/.simulator/img/SimulatorMask.png" alt="watch frame">
+    <div id="display-stage">
+      <canvas id="canvas" width="390" height="450" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+      <div id="loading-overlay" role="status" aria-live="polite" aria-label="loading wasm">
+        <div id="loading-panel">
+          <div id="loading-text">Loading... 0%</div>
+          <progress id="loading-progress" max="100" value="0"></progress>
+        </div>
+      </div>
+    </div>
+    <div id="bridge-controls" aria-hidden="true">
+      <button id="btn-crown" class="bridge-btn" type="button" aria-label="crown button"></button>
+      <button id="btn-side" class="bridge-btn" type="button" aria-label="side button"></button>
+    </div>
   </div>
 
   <script>
-    var BASE_WIDTH = 390;
-    var BASE_HEIGHT = 450;
-    var canvasElement = document.getElementById('canvas');
+    var FIXED_WIDTH = 390;
+    var FIXED_HEIGHT = 450;
+    var canvasEl = document.getElementById('canvas');
+    var loadingOverlayEl = document.getElementById('loading-overlay');
+    var loadingTextEl = document.getElementById('loading-text');
+    var loadingProgressEl = document.getElementById('loading-progress');
+    var crownBtn = document.getElementById('btn-crown');
+    var sideBtn = document.getElementById('btn-side');
+    var CROWN_BTN_IMG_URL = '/fs/.simulator/img/SimulatorCrown.png';
+    var SIDE_BTN_IMG_URL = '/fs/.simulator/img/SimulatorSideButton.png';
 
-    function fitCanvas() {
-      var dpr = window.devicePixelRatio || 1;
-      var availableWidth = window.innerWidth;
-      var availableHeight = window.innerHeight;
-      var scale = Math.min(availableWidth / BASE_WIDTH, availableHeight / BASE_HEIGHT);
-      var cssWidth = Math.max(1, Math.floor(BASE_WIDTH * scale));
-      var cssHeight = Math.max(1, Math.floor(BASE_HEIGHT * scale));
-      var backingWidth = Math.max(1, Math.floor(cssWidth * dpr));
-      var backingHeight = Math.max(1, Math.floor(cssHeight * dpr));
+    function setButtonImage(btn, imageUrl, fallbackText) {
+      var img = new Image();
 
-      canvasElement.style.width = cssWidth + 'px';
-      canvasElement.style.height = cssHeight + 'px';
+      img.onload = function() {
+        btn.style.backgroundImage = 'url("' + imageUrl + '")';
+        btn.style.backgroundColor = 'transparent';
+        btn.textContent = '';
+        btn.removeAttribute('title');
+      };
 
-      if (canvasElement.width !== backingWidth) canvasElement.width = backingWidth;
-      if (canvasElement.height !== backingHeight) canvasElement.height = backingHeight;
+      img.onerror = function() {
+        btn.style.backgroundImage = 'none';
+        btn.style.backgroundColor = 'rgba(22, 24, 28, 0.75)';
+        btn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+        btn.style.borderRadius = '999px';
+        btn.style.color = '#e8ecf2';
+        btn.style.fontSize = '10px';
+        btn.style.lineHeight = '1';
+        btn.style.fontFamily = '"Trebuchet MS", "Segoe UI", sans-serif';
+        btn.textContent = fallbackText;
+        btn.title = imageUrl;
+      };
+
+      img.src = imageUrl;
     }
 
-    window.addEventListener('resize', fitCanvas);
-    window.addEventListener('orientationchange', fitCanvas);
-    fitCanvas();
+    function recoverButtonImageIfBlob(btn, imageUrl, fallbackText) {
+      var styleBackgroundImage = btn.style.backgroundImage || '';
+      var computedBackgroundImage = window.getComputedStyle(btn).backgroundImage || '';
+      var hasBlob = styleBackgroundImage.indexOf('blob:') >= 0 || computedBackgroundImage.indexOf('blob:') >= 0;
+
+      if (hasBlob) {
+        setButtonImage(btn, imageUrl, fallbackText);
+      }
+    }
+
+    function enforceCanvasSize() {
+      canvasEl.style.width = FIXED_WIDTH + 'px';
+      canvasEl.style.height = FIXED_HEIGHT + 'px';
+    }
+
+    enforceCanvasSize();
+    window.addEventListener('resize', enforceCanvasSize);
+    setButtonImage(crownBtn, CROWN_BTN_IMG_URL, 'C');
+    setButtonImage(sideBtn, SIDE_BTN_IMG_URL, 'S');
+
+    /* Self-heal if external tooling/devtools rewrites button background to blob URLs. */
+    window.setInterval(function() {
+      recoverButtonImageIfBlob(crownBtn, CROWN_BTN_IMG_URL, 'C');
+      recoverButtonImageIfBlob(sideBtn, SIDE_BTN_IMG_URL, 'S');
+    }, 1200);
+
+    function showLoadingProgress(percent, text) {
+      var safePercent = Math.max(0, Math.min(100, percent));
+      loadingProgressEl.value = safePercent;
+      loadingTextEl.textContent = text || ('Loading... ' + safePercent + '%');
+      loadingOverlayEl.classList.remove('hidden');
+
+      if (safePercent >= 100) {
+        hideLoadingProgress();
+      }
+    }
+
+    function hideLoadingProgress() {
+      loadingOverlayEl.classList.add('hidden');
+    }
+
+    function updateLoadingFromStatus(text) {
+      if (!text) {
+        hideLoadingProgress();
+        return;
+      }
+
+      var match = text.match(/\((\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)\)/);
+      if (match) {
+        var current = Number(match[1]);
+        var total = Number(match[2]);
+        var percent = total > 0 ? Math.round((current / total) * 100) : 0;
+        showLoadingProgress(percent, 'Loading... ' + percent + '%');
+        return;
+      }
+
+      showLoadingProgress(0, text);
+    }
 
     var Module = {
-      canvas: (function () {
-        return canvasElement;
-      })()
+      canvas: canvasEl,
+      setStatus: function(text) {
+        updateLoadingFromStatus(typeof text === 'string' ? text : '');
+      },
+      totalDependencies: 0,
+      monitorRunDependencies: function(left) {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        var total = this.totalDependencies || 1;
+        var done = total - left;
+        var percent = Math.round((done / total) * 100);
+        showLoadingProgress(percent, 'Loading... ' + percent + '%');
+
+        if (left === 0) {
+          hideLoadingProgress();
+        }
+      }
+    };
+
+    Module.setStatus('Preparing...');
+
+    var ELENIX_MSG_NAMESPACE = 'ElenixOS';
+    var ELENIX_MSG_TYPE_COMMAND = 'command';
+    var ELENIX_MSG_TYPE_RESPONSE = 'response';
+    var ELENIX_MSG_TYPE_READY = 'ready';
+    var elenixReady = false;
+    var elenixPendingCommands = [];
+    var elenixApi = null;
+
+    function getMessageTarget() {
+      return window.parent && window.parent !== window ? window.parent : window;
+    }
+
+    function postMessageToHost(message) {
+      getMessageTarget().postMessage(message, '*');
+    }
+
+    function isElenixMessage(data) {
+      return data && typeof data === 'object' && data.namespace === ELENIX_MSG_NAMESPACE;
+    }
+
+    function normalizeCommand(data) {
+      if (!isElenixMessage(data) || data.type !== ELENIX_MSG_TYPE_COMMAND) {
+        return null;
+      }
+
+      if (typeof data.action !== 'string' || data.action.length === 0) {
+        return null;
+      }
+
+      return {
+        id: typeof data.id === 'string' ? data.id : '',
+        action: data.action,
+        payload: data.payload || {},
+        replyTo: typeof data.replyTo === 'boolean' ? data.replyTo : true
+      };
+    }
+
+    function sendResponse(command, ok, result, error) {
+      if (!command.replyTo) {
+        return;
+      }
+
+      postMessageToHost({
+        namespace: ELENIX_MSG_NAMESPACE,
+        type: ELENIX_MSG_TYPE_RESPONSE,
+        id: command.id,
+        action: command.action,
+        ok: ok,
+        result: result === undefined ? null : result,
+        error: error || null
+      });
+    }
+
+    function queueOrExecute(command) {
+      if (!command) {
+        return;
+      }
+
+      if (!elenixReady || !elenixApi) {
+        elenixPendingCommands.push(command);
+        return;
+      }
+
+      executeCommand(command);
+    }
+
+    function flushPendingCommands() {
+      while (elenixPendingCommands.length > 0) {
+        executeCommand(elenixPendingCommands.shift());
+      }
+    }
+
+    function executeCommand(command) {
+      var ok = false;
+      var result = null;
+      var error = null;
+
+      try {
+        switch (command.action) {
+          case 'crownClick':
+            elenixApi.crownClick();
+            ok = true;
+            break;
+          case 'sideClick':
+            elenixApi.sideClick();
+            ok = true;
+            break;
+          case 'launchAppById':
+            result = elenixApi.launchAppById(command.payload.appId);
+            ok = result !== false;
+            break;
+          case 'reloadCurrentScript':
+            result = elenixApi.reloadCurrentScript();
+            ok = result !== false;
+            break;
+          case 'backToWatchface':
+            result = elenixApi.backToWatchface();
+            ok = result !== false;
+            break;
+          case 'writeAppMainJs':
+            result = elenixApi.writeAppMainJs(command.payload.appId, command.payload.code);
+            ok = result !== false;
+            break;
+          case 'readAppMainJs':
+            result = elenixApi.readAppMainJs(command.payload.appId);
+            ok = result !== null;
+            break;
+          default:
+            error = 'Unknown action: ' + command.action;
+            break;
+        }
+      } catch (err) {
+        error = err && err.message ? err.message : String(err);
+      }
+
+      sendResponse(command, ok, result, error);
+    }
+
+    window.addEventListener('message', function(event) {
+      var command = normalizeCommand(event.data);
+      if (!command) {
+        return;
+      }
+
+      queueOrExecute(command);
+    });
+
+    var previousOnRuntimeInitialized = Module.onRuntimeInitialized;
+    Module.onRuntimeInitialized = function() {
+      if (typeof previousOnRuntimeInitialized === 'function') {
+        previousOnRuntimeInitialized();
+      }
+
+      var crownClick = Module.cwrap('eos_wasm_crown_click', null, []);
+      var sideClick = Module.cwrap('eos_wasm_side_click', null, []);
+      var launchAppById = Module.cwrap('eos_wasm_launch_app_by_id', 'number', ['string']);
+      var reloadCurrentScript = Module.cwrap('eos_wasm_reload_current_script', 'number', []);
+      var backToWatchface = Module.cwrap('eos_wasm_back_to_watchface', 'number', []);
+      var writeAppMainJs = Module.cwrap('eos_wasm_write_app_main_js', 'number', ['string', 'string']);
+      var readAppMainJs = Module.cwrap('eos_wasm_read_app_main_js', 'string', ['string']);
+
+      hideLoadingProgress();
+
+      elenixApi = {
+        crownClick: function() {
+          crownClick();
+          return true;
+        },
+        sideClick: function() {
+          sideClick();
+          return true;
+        },
+        launchAppById: function(appId) {
+          if (!(typeof appId === 'string' && appId.length > 0)) {
+            return false;
+          }
+          return launchAppById(appId) !== 0;
+        },
+        reloadCurrentScript: function() {
+          return reloadCurrentScript() !== 0;
+        },
+        backToWatchface: function() {
+          return backToWatchface() !== 0;
+        },
+        writeAppMainJs: function(appId, code) {
+          if (!(typeof appId === 'string' && appId.length > 0)) {
+            return false;
+          }
+
+          if (typeof code !== 'string') {
+            return false;
+          }
+
+          return writeAppMainJs(appId, code) !== 0;
+        },
+        readAppMainJs: function(appId) {
+          if (!(typeof appId === 'string' && appId.length > 0)) {
+            return null;
+          }
+
+          return readAppMainJs(appId);
+        }
+      };
+
+      elenixReady = true;
+
+      postMessageToHost({
+        namespace: ELENIX_MSG_NAMESPACE,
+        type: ELENIX_MSG_TYPE_READY,
+        ready: true,
+        actions: ['crownClick', 'sideClick', 'launchAppById', 'reloadCurrentScript', 'backToWatchface', 'writeAppMainJs', 'readAppMainJs']
+      });
+
+      flushPendingCommands();
+
+      crownBtn.addEventListener('click', function() {
+        queueOrExecute({
+          id: '',
+          action: 'crownClick',
+          payload: {},
+          replyTo: false
+        });
+      });
+
+      sideBtn.addEventListener('click', function() {
+        queueOrExecute({
+          id: '',
+          action: 'sideClick',
+          payload: {},
+          replyTo: false
+        });
+      });
     };
   </script>
   {{{ SCRIPT }}}

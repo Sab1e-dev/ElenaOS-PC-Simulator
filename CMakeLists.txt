@@ -172,6 +172,26 @@ endif()
 
 if(EOS_IS_WASM)
     set_target_properties(main PROPERTIES SUFFIX ".html")
+
+    file(GLOB_RECURSE WASM_PRELOAD_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        "${PROJECT_SOURCE_DIR}/fs/.sys/*"
+        "${PROJECT_SOURCE_DIR}/fs/.simulator/*"
+    )
+
+    set_property(TARGET main APPEND PROPERTY LINK_DEPENDS
+        "${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
+        ${WASM_PRELOAD_FILES}
+    )
+
+    add_custom_command(TARGET main PRE_LINK
+        COMMAND ${CMAKE_COMMAND} -E remove_directory "${EOS_RUNTIME_OUTPUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${EOS_RUNTIME_OUTPUT_DIR}"
+        COMMENT "Clean WASM runtime output directory to force main.data regeneration"
+        VERBATIM
+    )
+
     target_link_options(main PRIVATE
         "-sUSE_SDL=2"
         "-sALLOW_MEMORY_GROWTH=1"
@@ -179,6 +199,8 @@ if(EOS_IS_WASM)
         "-sASSERTIONS=1"
         "-sSAFE_HEAP=0"
         "-sEXIT_RUNTIME=0"
+        "-sEXPORTED_FUNCTIONS=['_main','_eos_wasm_crown_click','_eos_wasm_side_click','_eos_wasm_launch_app_by_id','_eos_wasm_reload_current_script','_eos_wasm_back_to_watchface','_eos_wasm_write_app_main_js','_eos_wasm_read_app_main_js']"
+        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
         "-sNO_DISABLE_EXCEPTION_CATCHING"
         "--shell-file=${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
         "--preload-file=${PROJECT_SOURCE_DIR}/fs/.sys@/.sys"

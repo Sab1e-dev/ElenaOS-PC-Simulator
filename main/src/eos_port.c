@@ -160,6 +160,11 @@ void eos_display_set_brightness(uint8_t brightness)
     printf("raw: %d - brightness: %.2f\n", brightness, b);
     if (!brightness_mask || !lv_obj_is_valid(brightness_mask))
         return;
+    // To avoid too dark when brightness is low, we set a minimum opacity
+    if (b > 200)
+    {
+        b = 200;
+    }
     lv_obj_set_style_opa(brightness_mask, b, 0);
     return;
 }
@@ -282,6 +287,13 @@ void *_thread_sensor(void *arg)
 
 void eos_sensor_read_async(eos_sensor_type_t type)
 {
+#ifdef __EMSCRIPTEN__
+    /* Browsers without pthread support (or cross-origin isolation) cannot create
+     * native threads. Fallback to synchronous execution to keep simulator alive. */
+    eos_sensor_type_t local_type = type;
+    _thread_sensor(&local_type);
+    return;
+#else
     pthread_t thread;
 
     eos_sensor_type_t *arg = malloc(sizeof(eos_sensor_type_t));
@@ -293,6 +305,7 @@ void eos_sensor_read_async(eos_sensor_type_t type)
         perror("pthread_create failed");
         free(arg);
     }
+#endif
 }
 
 void eos_sensor_read_sync(eos_sensor_type_t type, eos_sensor_t *out)
