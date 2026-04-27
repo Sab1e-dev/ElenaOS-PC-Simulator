@@ -1,0 +1,109 @@
+name: Native Build Matrix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - CMakeLists.txt
+      - ElenixOS/**
+      - FreeRTOS/**
+      - config/**
+      - fs/**
+      - lv_drivers/**
+      - lvgl/**
+      - main/**
+      - .github/workflows/build-native.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - CMakeLists.txt
+      - ElenixOS/**
+      - FreeRTOS/**
+      - config/**
+      - fs/**
+      - lv_drivers/**
+      - lvgl/**
+      - main/**
+      - .github/workflows/build-native.yml
+  workflow_dispatch:
+
+concurrency:
+  group: native-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+          - name: Windows
+            os: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libsdl2-dev
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          brew install cmake ninja sdl2
+
+      - name: Set up MSYS2
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-pkgconf
+
+      - name: Configure Linux build
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -G Ninja -DEOS_PLATFORM=Native -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Linux
+        if: runner.os == 'Linux'
+        run: cmake --build build --parallel
+
+      - name: Configure macOS build
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build -G Ninja -DEOS_PLATFORM=Native -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix sdl2)"
+
+      - name: Build macOS
+        if: runner.os == 'macOS'
+        run: cmake --build build --parallel
+
+      - name: Configure Windows build
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: cmake -S . -B build -G Ninja -DEOS_PLATFORM=Native -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/mingw64
+
+      - name: Build Windows
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: cmake --build build --parallel

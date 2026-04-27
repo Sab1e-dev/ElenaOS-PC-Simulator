@@ -5,8 +5,7 @@ project(lvgl C CXX)
 # add_compile_options(-fsanitize=address)
 # add_link_options(-fsanitize=address)
 
-# 禁用枚举转换警告
-if(NOT WIN32)
+if(APPLE)
     add_compile_options(-Wno-enum-enum-conversion)
     add_compile_options(-Wno-error=enum-enum-conversion)
 endif()
