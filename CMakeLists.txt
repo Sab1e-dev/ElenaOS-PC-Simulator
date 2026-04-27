@@ -192,7 +192,7 @@ if(EOS_IS_WASM)
     )
 
     # Create a custom target to monitor fs directory changes without forcing rebuild
-    # If fs/.sys or fs/.simulator are modified, users should manually rebuild
+    # If fs/.sys or main/static are modified, users should manually rebuild
     add_custom_command(TARGET main PRE_LINK
         COMMAND ${CMAKE_COMMAND} -E make_directory "${EOS_RUNTIME_OUTPUT_DIR}"
         COMMAND ${CMAKE_COMMAND} -E remove_directory "${EOS_RUNTIME_OUTPUT_DIR}/static"
@@ -213,7 +213,7 @@ if(EOS_IS_WASM)
         "-sNO_DISABLE_EXCEPTION_CATCHING"
         "--shell-file=${PROJECT_SOURCE_DIR}/main/wasm_shell.html"
         "--preload-file=${PROJECT_SOURCE_DIR}/fs/.sys@/.sys"
-        "--preload-file=${PROJECT_SOURCE_DIR}/fs/.simulator@/.simulator"
+        "--preload-file=${PROJECT_SOURCE_DIR}/main/static@/.simulator/img"
         "--source-map-base=${EOS_WASM_SOURCE_MAP_BASE}"
     )
 
