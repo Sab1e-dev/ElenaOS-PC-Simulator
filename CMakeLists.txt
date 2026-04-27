@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(lvgl C CXX)
 
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
+
 # 内存错误检测
 # add_compile_options(-fsanitize=address)
 # add_link_options(-fsanitize=address)
@@ -9,7 +12,12 @@ if(APPLE)
     add_compile_options(-Wno-enum-enum-conversion)
     add_compile_options(-Wno-error=enum-enum-conversion)
 endif()
-add_compile_options(-Wno-unterminated-string-initialization)
+
+check_c_compiler_flag("-Wno-unterminated-string-initialization" EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_C)
+check_cxx_compiler_flag("-Wno-unterminated-string-initialization" EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_CXX)
+if(EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_C AND EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_CXX)
+    add_compile_options(-Wno-unterminated-string-initialization)
+endif()
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
