@@ -4,20 +4,22 @@ project(lvgl C CXX)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+function(add_flag_if_supported flag)
+    string(REPLACE "-" "_" flag_var ${flag})
+    check_c_compiler_flag(${flag} HAS_${flag_var})
+
+    if(HAS_${flag_var})
+        add_compile_options(${flag})
+    endif()
+endfunction()
+
 # 内存错误检测
 # add_compile_options(-fsanitize=address)
 # add_link_options(-fsanitize=address)
 
-if(APPLE)
-    add_compile_options(-Wno-enum-enum-conversion)
-    add_compile_options(-Wno-error=enum-enum-conversion)
-endif()
-
-check_c_compiler_flag("-Wno-unterminated-string-initialization" EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_C)
-check_cxx_compiler_flag("-Wno-unterminated-string-initialization" EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_CXX)
-if(EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_C AND EOS_HAS_WNO_UNTERMINATED_STRING_INITIALIZATION_CXX)
-    add_compile_options(-Wno-unterminated-string-initialization)
-endif()
+add_flag_if_supported("-Wno-unterminated-string-initialization")
+add_flag_if_supported("-Wno-enum-enum-conversion")
+add_flag_if_supported("-Wno-error=enum-enum-conversion")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
