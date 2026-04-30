@@ -21,6 +21,14 @@
 #include "my_include.h"
 #endif
 
+#include "ElenixOS/src/core/system/eos_event_def.h"
+
+#define LV_GLOBAL_INIT(__GLOBAL_PTR)                                                    \
+    do {                                                                                \
+        lv_global_init((lv_global_t *)(__GLOBAL_PTR));                                  \
+        ((lv_global_t *)(__GLOBAL_PTR))->event_last_register_id = EOS_EVENT_USER_BASE;  \
+    } while(0)
+
 /*====================
    COLOR SETTINGS
  *====================*/
