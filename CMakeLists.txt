@@ -39,6 +39,12 @@ endif()
 message(STATUS "ElenixOS simulator platform: ${EOS_PLATFORM}")
 
 if(EOS_IS_WASM)
+    add_compile_definitions(EOS_SYS_ROOT_DIR="/")
+else()
+    add_compile_definitions(EOS_SYS_ROOT_DIR="${CMAKE_SOURCE_DIR}/fs/")
+endif()
+
+if(EOS_IS_WASM)
     set(ASSETS_DIR "/.simulator/img")
 else()
     set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/native/")
@@ -77,6 +83,13 @@ else()
     set(FREERTOS_SOURCES "")
 endif()
 
+include_directories(${PROJECT_SOURCE_DIR}/main/src)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/vibrator)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/display)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/power)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/time)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/sensor)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/battery)
 include_directories(${PROJECT_SOURCE_DIR}/main/inc)
 include_directories(${PROJECT_SOURCE_DIR}/debugger_box)
 
@@ -146,6 +159,12 @@ set(EOS_MAIN_SOURCES
     ${PROJECT_SOURCE_DIR}/main/src/jerry_port.c
     ${PROJECT_SOURCE_DIR}/main/src/mac_api.c
     ${PROJECT_SOURCE_DIR}/main/src/mouse_cursor_icon.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/vibrator/eos_port_vibrator.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/display/eos_port_display.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/power/eos_port_power.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/time/eos_port_time.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/sensor/eos_port_sensor.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/battery/eos_port_battery.c
 )
 
 if(USE_FREERTOS)

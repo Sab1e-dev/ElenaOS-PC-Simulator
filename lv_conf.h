@@ -21,14 +21,6 @@
 #include "my_include.h"
 #endif
 
-#include "ElenixOS/src/core/system/eos_event_def.h"
-
-#define LV_GLOBAL_INIT(__GLOBAL_PTR)                                                    \
-    do {                                                                                \
-        lv_global_init((lv_global_t *)(__GLOBAL_PTR));                                  \
-        ((lv_global_t *)(__GLOBAL_PTR))->event_last_register_id = EOS_EVENT_USER_BASE;  \
-    } while(0)
-
 /*====================
    COLOR SETTINGS
  *====================*/
@@ -331,11 +323,19 @@
 
 /*Enable asserts if an operation is failed or an invalid data is found.
  *If LV_USE_LOG is enabled an error message will be printed on failure*/
+#ifdef __EMSCRIPTEN__
 #define LV_USE_ASSERT_NULL          0   /*Check if the parameter is NULL. (Very fast, recommended)*/
 #define LV_USE_ASSERT_MALLOC        0   /*Checks is the memory is successfully allocated or no. (Very fast, recommended)*/
 #define LV_USE_ASSERT_STYLE         0
 #define LV_USE_ASSERT_MEM_INTEGRITY 0
 #define LV_USE_ASSERT_OBJ           0
+#else
+#define LV_USE_ASSERT_NULL          1   /*Check if the parameter is NULL. (Very fast, recommended)*/
+#define LV_USE_ASSERT_MALLOC        1   /*Checks is the memory is successfully allocated or no. (Very fast, recommended)*/
+#define LV_USE_ASSERT_STYLE         1
+#define LV_USE_ASSERT_MEM_INTEGRITY 1
+#define LV_USE_ASSERT_OBJ           1
+#endif
 
 /*Add a custom handler when assert happens e.g. to restart the MCU*/
 #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
@@ -726,7 +726,7 @@
 #define LV_USE_FS_STDIO 1
 #if LV_USE_FS_STDIO
     #define LV_FS_STDIO_LETTER 'A'
-    #define LV_FS_STDIO_PATH ""         /*Set the working directory. File/directory paths will be appended to it.*/
+    #define LV_FS_STDIO_PATH EOS_SYS_ROOT_DIR         /*Set the working directory. File/directory paths will be appended to it.*/
     #define LV_FS_STDIO_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
 

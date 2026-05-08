@@ -17,16 +17,21 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/examples/lv_examples.h"
 #include "lvgl/demos/lv_demos.h"
-#if LV_USE_OS == LV_OS_ELENAOS
 #include "elenix_os.h"
-#include "eos_img.h"
 #include "eos_app.h"
 #include "eos_app_list.h"
 #include "eos_activity.h"
-#include "eos_fs.h"
+#include "eos_service_storage.h"
 #include "eos_mem.h"
 #include "script_engine_core.h"
-#endif
+#include "eos_port_vibrator.h"
+#include "eos_port_display.h"
+#include "eos_port_power.h"
+#include "eos_port_time.h"
+#include "eos_port_battery.h"
+#include "eos_port_sensor.h"
+#include "eos_service_sensor.h"
+#include "eos_dev_battery.h"
 
 // Macros and Definitions
 
@@ -106,8 +111,14 @@ int main(int argc, char **argv)
   /*Initialize the HAL (display, input devices, tick) for LVGL*/
   hal_init(WINDOW_WIDTH, WINDOW_HEIGHT);
 
-  eos_sensor_register(EOS_SENSOR_TYPE_ACCE);
-  eos_sensor_register(EOS_SENSOR_TYPE_BAT);
+  eos_port_sensor_init();
+  eos_service_sensor_init();
+  eos_port_vibrator_init();
+  eos_port_display_init();
+  eos_port_power_init();
+  eos_port_time_init();
+  eos_port_battery_init();
+
   eos_init();
 #ifdef __EMSCRIPTEN__
   emscripten_request_animation_frame_loop(eos_main_loop_frame, NULL);
@@ -234,12 +245,12 @@ EMSCRIPTEN_KEEPALIVE const char *eos_wasm_read_app_main_js(const char *app_id)
     return NULL;
   }
 
-  if (!eos_is_file(script_path))
+  if (!eos_storage_is_file(script_path))
   {
     return NULL;
   }
 
-  g_wasm_last_read_code = eos_fs_read_file(script_path);
+  g_wasm_last_read_code = eos_storage_read_file(script_path);
   return g_wasm_last_read_code;
 }
 #endif
@@ -356,6 +367,7 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   const uint16_t frame_outline_width = 10;
   const uint16_t watch_frame_width = EOS_DISPLAY_WIDTH + (frame_width) * 2;
   const uint16_t watch_frame_height = EOS_DISPLAY_HEIGHT + (frame_width) * 2;
+
   lv_obj_t *watch_frame = lv_obj_create(simulator_container);
   lv_obj_remove_style_all(watch_frame);
   lv_obj_set_size(watch_frame, watch_frame_width, watch_frame_height);
@@ -384,13 +396,14 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   lv_sysmon_hide_memory(disp);
 #endif /* LV_USE_PERF_MONITOR */
 
-  brightness_mask = lv_obj_create(lv_layer_sys());
+  /* Create brightness mask after virtual display (on top of vd) */
+  brightness_mask = lv_obj_create(simulator_container);
   lv_obj_set_size(brightness_mask, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
   lv_obj_set_style_bg_color(brightness_mask, lv_color_black(), 0);
   lv_obj_set_style_border_width(brightness_mask, 0, 0);
   lv_obj_set_style_opa(brightness_mask, LV_OPA_TRANSP, 0);
   lv_obj_remove_flag(brightness_mask, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_move_foreground(brightness_mask);
+  lv_obj_set_style_radius(brightness_mask, EOS_DISPLAY_RADIUS, 0);
   lv_obj_center(brightness_mask);
 
   lv_obj_t *crown = lv_imagebutton_create(simulator_container);
