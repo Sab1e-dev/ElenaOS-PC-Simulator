@@ -207,4 +207,14 @@ void set_system_volume(float volume)
     (void)volume;
 }
 
+float get_system_battery_level(void)
+{
+    return -1.0f;
+}
+
+int get_system_charging(void)
+{
+    return -1;
+}
+
 #endif

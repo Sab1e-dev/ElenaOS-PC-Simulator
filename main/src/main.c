@@ -314,13 +314,40 @@ static lv_display_t *hal_init(int32_t w, int32_t h)
   lv_indev_set_display(kb, disp);
   lv_indev_set_group(kb, lv_group_get_default());
 
-  brightness_mask = lv_obj_create(lv_layer_sys());
+  /* Create simulator container like native mode */
+  lv_obj_t *simulator_container = lv_obj_create(lv_screen_active());
+  lv_obj_remove_style_all(simulator_container);
+  lv_obj_set_size(simulator_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  lv_obj_remove_flag(simulator_container, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_center(simulator_container);
+
+  /* Create virtual display container like native mode */
+  lv_obj_t *vd_container = lv_obj_create(simulator_container);
+  lv_obj_remove_style_all(vd_container);
+  lv_obj_set_size(vd_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  lv_obj_center(vd_container);
+  lv_obj_remove_flag(vd_container, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_radius(vd_container, EOS_DISPLAY_RADIUS, 0);
+  lv_obj_set_style_clip_corner(vd_container, true, 0);
+
+  /* Create virtual display on vd_container */
+  disp = eos_virtual_display_create(vd_container, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
+  LV_ASSERT(disp != NULL);
+  lv_display_set_default(disp);
+
+#if LV_USE_PERF_MONITOR
+  lv_sysmon_hide_performance(disp);
+  lv_sysmon_hide_memory(disp);
+#endif /* LV_USE_PERF_MONITOR */
+
+  /* Create brightness mask after virtual display (on top of vd, similar to native mode) */
+  brightness_mask = lv_obj_create(simulator_container);
   lv_obj_set_size(brightness_mask, EOS_DISPLAY_WIDTH, EOS_DISPLAY_HEIGHT);
   lv_obj_set_style_bg_color(brightness_mask, lv_color_black(), 0);
   lv_obj_set_style_border_width(brightness_mask, 0, 0);
   lv_obj_set_style_opa(brightness_mask, LV_OPA_TRANSP, 0);
   lv_obj_remove_flag(brightness_mask, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_move_foreground(brightness_mask);
+  lv_obj_set_style_radius(brightness_mask, EOS_DISPLAY_RADIUS, 0);
   lv_obj_center(brightness_mask);
 
   return disp;

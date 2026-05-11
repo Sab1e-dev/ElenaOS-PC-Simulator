@@ -14,5 +14,5 @@ label.center();
 // Add an event callback to the button
 button.addEventCb((e) => {
     eos.console.log('Button clicked!');
-    label.setText('Clicked!');
+    label.setText(label.getText()=='Click Me'?'Clicked!':'Click Me');
 }, lv.EVENT_CLICKED, null);
