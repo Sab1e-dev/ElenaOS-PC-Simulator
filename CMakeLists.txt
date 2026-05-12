@@ -90,6 +90,7 @@ include_directories(${PROJECT_SOURCE_DIR}/main/src/port/power)
 include_directories(${PROJECT_SOURCE_DIR}/main/src/port/time)
 include_directories(${PROJECT_SOURCE_DIR}/main/src/port/sensor)
 include_directories(${PROJECT_SOURCE_DIR}/main/src/port/battery)
+include_directories(${PROJECT_SOURCE_DIR}/main/src/port/audio)
 include_directories(${PROJECT_SOURCE_DIR}/main/inc)
 include_directories(${PROJECT_SOURCE_DIR}/debugger_box)
 
@@ -165,6 +166,7 @@ set(EOS_MAIN_SOURCES
     ${PROJECT_SOURCE_DIR}/main/src/port/time/eos_port_time.c
     ${PROJECT_SOURCE_DIR}/main/src/port/sensor/eos_port_sensor.c
     ${PROJECT_SOURCE_DIR}/main/src/port/battery/eos_port_battery.c
+    ${PROJECT_SOURCE_DIR}/main/src/port/audio/eos_port_audio.c
 )
 
 if(USE_FREERTOS)

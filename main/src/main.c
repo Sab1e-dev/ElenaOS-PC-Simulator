@@ -29,6 +29,7 @@
 #include "eos_port_power.h"
 #include "eos_port_time.h"
 #include "eos_port_battery.h"
+#include "eos_port_audio.h"
 #include "eos_port_sensor.h"
 #include "eos_service_sensor.h"
 #include "eos_dev_battery.h"
@@ -118,6 +119,7 @@ int main(int argc, char **argv)
   eos_port_power_init();
   eos_port_time_init();
   eos_port_battery_init();
+  eos_port_audio_init();
 
   eos_init();
 #ifdef __EMSCRIPTEN__
